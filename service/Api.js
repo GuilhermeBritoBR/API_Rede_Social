@@ -13,13 +13,13 @@ const router = express.Router();
 const PORTA = 3000;
 //criar conexão com mysql
 //NOME DA TABELA PARA INSERIR DADOS DE USUARIO
-var nomeDaTabela = "";
+var nomeDaTabela = "credenciais";
 //variavel DB do mysql
 const db = MySql.createConnection({
     'host': 'localhost',
     'user': 'root',
     'password': '',
-    'database': ``
+    'database': `MovieMaster`
 })
 //cors
 app.use(cors());
@@ -44,13 +44,13 @@ function VerifyToken(req,res,next){
 //Cadastro dos dados
 app.post('/registerPage/cadastro',(req,res)=>{
     //coletando nome e senha
-    const {name,email, password}= req.body;
+    const {nome,email, senha}= req.body;
     //verificando valor destas
-    console.log(`Respectivamente as variaveis: ${name,email, password}`);
+    console.log(`Respectivamente as variaveis: ${nome,email, senha}`);
     //variavel com comando SLQ para inserir dados na tabela credenciais
     const InserirDadosSQL = `INSERT INTO ${nomeDaTabela} (nome, email, senha) VALUES (?,?,SHA2(?, 256))`;
     //salvar esses dados em um banco de dados próprio do usuário
-    db.query(InserirDadosSQL,[name,email,password],(err,resposta)=>{
+    db.query(InserirDadosSQL,[nome,email,senha],(err,resposta)=>{
         if(err){
             console.log(`Erro Ao inserir Dados na tabela de cadastro na RegisterPage, segue o erro: ${err}`);
             return;
@@ -58,7 +58,7 @@ app.post('/registerPage/cadastro',(req,res)=>{
             //token para validação
             const token = jwt.sign({email}, 'secreto', {expiresIn: '1h'});
             //envio do token mais resposta da API
-            res.json({Mensagem: `Cadastro da RegisterPage Realizado com Sucesso!${resposta}`,name, token});
+            res.json({Mensagem: `Cadastro da RegisterPage Realizado com Sucesso!${resposta}`,nome, token});
         }
     })
 
@@ -66,11 +66,11 @@ app.post('/registerPage/cadastro',(req,res)=>{
 //login do usuário
 app.post('/loginPage/login',(req,res)=>{
     //coletando email e senha
-    const {email, password}= req.body;
+    const {emailEnome, senha}= req.body;
     //comando slq para verificar valoress
     const ValidarDadosSQL = `SELECT nome FROM ${nomeDaTabela} WHERE email = ? AND senha = SHA2(?, 256)`;
     //verificar dados do SQL
-    db.query(ValidarDadosSQL,[email,password],(err,resposta)=>{
+    db.query(ValidarDadosSQL,[emailEnome,senha],(err,resposta)=>{
         if(err){
             console.log(`Erro Ao verificar Dados na tabela de cadastro na LoginPage, segue o erro: ${err}`);
             return;
@@ -78,7 +78,7 @@ app.post('/loginPage/login',(req,res)=>{
             //buscar nome
             const name = resposta[0].nome;
             //token para validação
-            const token = jwt.sign({email}, 'secreto', {expiresIn: '1h'});
+            const token = jwt.sign({emailEnome}, 'secreto', {expiresIn: '1h'});
             //envio do token mais resposta da API
             res.json({Mensagem: `Login da LoginPage Realizado com Sucesso!${resposta}`,name, token});
         }
