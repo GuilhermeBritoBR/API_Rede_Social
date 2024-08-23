@@ -34,13 +34,25 @@ function VerifyToken(req,res,next){
     const token = req.headers['authorization'];
     //ve se tem token
     if(!token)return res.sendStatus(403);
+
     jwt.verify(token, 'secreto', (err, user)=>{
         if(err) return res.sendStatus(403);
+
+    // Verifica se o token está na lista de tokens revogados no banco de dados
+    const sql = 'SELECT * FROM tokensRevogados WHERE token = ?';
+    db.query(sql, [token], (dbErr, result) => {
+        if (dbErr) return res.status(500).json({ error: "Erro ao verificar o token no banco de dados" });
+
+        if (result.length > 0) {
+                // Se o token estiver na lista de tokens revogados, retorna status 403
+            return res.sendStatus(403);
+            }
+
         req.user = user;
         next();
-    })
+    })})};
 
-}
+
 //Cadastro dos dados
 app.post('/registerPage/cadastro',(req,res)=>{
     //coletando nome e senha
@@ -55,12 +67,14 @@ app.post('/registerPage/cadastro',(req,res)=>{
             console.log(`Erro Ao inserir Dados na tabela de cadastro na RegisterPage, segue o erro: ${err}`);
             return;
         }else{
-            //token para validação
-            const token = jwt.sign({email}, 'secreto', {expiresIn: '30d'});
             //buscando nome
-            
+            const nomeResposta = resposta[0].nome;
+            //gerando o id automático
+            const id = resposta.insertId;
+            //token para validação
+            const token = jwt.sign({ id, nomeResposta }, 'secreto', { expiresIn: '30d' });
             //envio do token mais resposta da API
-            res.json({Mensagem: `Cadastro da RegisterPage Realizado com Sucesso!${resposta}`, token});
+            res.json({Mensagem: `Cadastro da RegisterPage Realizado com Sucesso!${resposta}`, nomeResposta, token});
         }
     })
 
@@ -75,7 +89,7 @@ app.post('/loginPage/login',(req,res)=>{
     //neste comando sql eu seleciono o nome para salvar localmente e usar na aplicação
     //também coloco uma comparação aonde se o nome ou email estiver correto o usuario é aprovado
     const ValidarDadosSQL = `
-        SELECT nome 
+        SELECT id, nome 
         FROM ${nomeDaTabela} 
         WHERE (email = ? OR nome = ?) 
         AND senha = SHA2(?, 256)`;
@@ -89,23 +103,18 @@ app.post('/loginPage/login',(req,res)=>{
             // Nenhum usuário encontrado
             return res.status(401).json({ Mensagem: "Usuário ou senha inválidos." });
         }
-        
-            //buscar nome
-            const nomeResposta = resposta[0].nome;
-            
+            //coletando os dados 
+            const {id, nome} = resposta[0];
+            const nomeResposta = nome;
             //token para validação
-            const token = jwt.sign({emailEnome}, 'secreto', {expiresIn: '30d'});
+            const token = jwt.sign({ id, nomeResposta }, 'secreto', { expiresIn: '30d' });
             //envio do token mais resposta da API
             res.json({Mensagem: `Login da LoginPage Realizado com Sucesso!${resposta}`,nomeResposta, token});
         
     })
 });
 //atualizar os dados do usuario 
-//atualizar nome
-app.get(`/userPage/atualizarNomeDoUsuario/:id`,(req,res)=>{
-    //coletando nome
-    const {name}= req.body;
-});
+
 //rota da homepage
 app.get('/homePage', VerifyToken,( req, res)=>{
     res.json({Mensagem: `Acessado a HomePage ROTA GET com sucesso!`})
@@ -148,8 +157,57 @@ app.post('/logout',(req,res)=>{
         res.json({ Mensagem: "Logout realizado com sucesso!" });
     })
 });
+//funções de atualização de informações do usuario
+//para atualizar devo receber esses dados da API antes
+app.get('/UserPage/ColetarDadosDoUsuario',VerifyToken,(req,res)=>{
+    //requerindo id do usuario
+    const idDoUsuario = req.user.id;
+    //verificando o id
+    console.log(`Segue o valor do  Id: ${req.user.id}`);
+    // Verifica se o ID foi encontrado
+    if (!idDoUsuario) {
+        return res.status(400).json({ mensagem: 'ID do usuário não encontrado' });
+    }
+    //comando sql para buscar dados
+    const BuscarDadosDoUsuario = `SELECT nome, email, senha FROM ${nomeDaTabela} WHERE id = ?`;
+    //buscando
+    db.query(BuscarDadosDoUsuario,[idDoUsuario],(erro,resposta)=>{
+        if(erro){
+            console.error(`Segue o erro ao buscar os dados do usuário ${erro}`);
+            return res.status(500).json({ mensagem: 'Erro ao buscar dados do usuário' });
+        }
+        if (resposta.length === 0) {
+            return res.status(404).json({ mensagem: 'Usuário não encontrado' });
+        }
+        //buscando os dados
+        const {nome, email} = resposta[0];
+        res.json({ mensagem: 'Dados coletados com sucesso', nome, email });
+    })
+});
+//UPDATE
+app.put("/UserPage/AtualizarDadosDoUsuario",(req,res)=>{
+    //requerindo id do usuario
+    const idDoUsuario = req.user.id;
+    //requerindo os dados do usuario alterados
+    const [nome, email, senha] = req.body;
+    //comando SLQ
+    const InjetarNovosDados = `UPDATE ${nomeDaTabela} SET nome = ?, SET email = ?, SET senha ? WHERE id = ?`;
+    //injetantado os dados
+    db.query(InjetarNovosDados,[nome, email, senha, idDoUsuario],(erro, resposta)=>{
+        if(erro){
+            console.error(`Segue o erro: ${erro} no momento de atualizar os dados`);
+            return res.status(500).json({ mensagem: 'Erro ao atualizar dados do usuário'});
+        }
+        if (resposta.affectedRows > 0) {
+            res.json({ mensagem: 'Dados do usuário atualizados com sucesso' });
+        } else {
+            res.status(404).json({ mensagem: 'Usuário não encontrado' });
+        }
+    })
+})
 //rodar api
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
   });
+
 module.exports = router;
