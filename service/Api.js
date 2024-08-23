@@ -67,14 +67,12 @@ app.post('/registerPage/cadastro',(req,res)=>{
             console.log(`Erro Ao inserir Dados na tabela de cadastro na RegisterPage, segue o erro: ${err}`);
             return;
         }else{
-            //buscando nome
-            const nomeResposta = resposta[0].nome;
             //gerando o id automático
             const id = resposta.insertId;
             //token para validação
-            const token = jwt.sign({ id, nomeResposta }, 'secreto', { expiresIn: '30d' });
+            const token = jwt.sign({ id, nome }, 'secreto', { expiresIn: '30d' });
             //envio do token mais resposta da API
-            res.json({Mensagem: `Cadastro da RegisterPage Realizado com Sucesso!${resposta}`, nomeResposta, token});
+            res.json({Mensagem: `Cadastro da RegisterPage Realizado com Sucesso!${resposta}`,nome, token});
         }
     })
 
@@ -89,7 +87,7 @@ app.post('/loginPage/login',(req,res)=>{
     //neste comando sql eu seleciono o nome para salvar localmente e usar na aplicação
     //também coloco uma comparação aonde se o nome ou email estiver correto o usuario é aprovado
     const ValidarDadosSQL = `
-        SELECT id, nome 
+        SELECT id, nome, email 
         FROM ${nomeDaTabela} 
         WHERE (email = ? OR nome = ?) 
         AND senha = SHA2(?, 256)`;
@@ -104,12 +102,12 @@ app.post('/loginPage/login',(req,res)=>{
             return res.status(401).json({ Mensagem: "Usuário ou senha inválidos." });
         }
             //coletando os dados 
-            const {id, nome} = resposta[0];
+            const {id, nome, email} = resposta[0];
             const nomeResposta = nome;
             //token para validação
             const token = jwt.sign({ id, nomeResposta }, 'secreto', { expiresIn: '30d' });
             //envio do token mais resposta da API
-            res.json({Mensagem: `Login da LoginPage Realizado com Sucesso!${resposta}`,nomeResposta, token});
+            res.json({Mensagem: `Login da LoginPage Realizado com Sucesso!${resposta}`,nomeResposta, token, email});
         
     })
 });
