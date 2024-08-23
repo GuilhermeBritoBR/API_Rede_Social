@@ -102,7 +102,7 @@ app.post('/loginPage/login',(req,res)=>{
             return res.status(401).json({ Mensagem: "Usuário ou senha inválidos." });
         }
             //coletando os dados 
-            const {id, nome, email} = resposta[0];
+            const {id, nome, email} =   resposta[0];
             const nomeResposta = nome;
             //token para validação
             const token = jwt.sign({ id, nomeResposta }, 'secreto', { expiresIn: '30d' });
@@ -167,7 +167,7 @@ app.get('/UserPage/ColetarDadosDoUsuario',VerifyToken,(req,res)=>{
         return res.status(400).json({ mensagem: 'ID do usuário não encontrado' });
     }
     //comando sql para buscar dados
-    const BuscarDadosDoUsuario = `SELECT nome, email, senha FROM ${nomeDaTabela} WHERE id = ?`;
+    const BuscarDadosDoUsuario = `SELECT nome, email FROM ${nomeDaTabela} WHERE id = ?`;
     //buscando
     db.query(BuscarDadosDoUsuario,[idDoUsuario],(erro,resposta)=>{
         if(erro){
@@ -183,15 +183,15 @@ app.get('/UserPage/ColetarDadosDoUsuario',VerifyToken,(req,res)=>{
     })
 });
 //UPDATE
-app.put("/UserPage/AtualizarDadosDoUsuario",(req,res)=>{
+app.put("/UserPage/AtualizarDadosDoUsuario",VerifyToken, (req,res)=>{
     //requerindo id do usuario
     const idDoUsuario = req.user.id;
     //requerindo os dados do usuario alterados
-    const [nome, email, senha] = req.body;
+    const { nome, email} = req.body;
     //comando SLQ
-    const InjetarNovosDados = `UPDATE ${nomeDaTabela} SET nome = ?, SET email = ?, SET senha ? WHERE id = ?`;
+    const InjetarNovosDados = `UPDATE ${nomeDaTabela} SET nome = ?, email = ? WHERE id = ?`;
     //injetantado os dados
-    db.query(InjetarNovosDados,[nome, email, senha, idDoUsuario],(erro, resposta)=>{
+    db.query(InjetarNovosDados,[nome, email, idDoUsuario],(erro, resposta)=>{
         if(erro){
             console.error(`Segue o erro: ${erro} no momento de atualizar os dados`);
             return res.status(500).json({ mensagem: 'Erro ao atualizar dados do usuário'});
@@ -199,7 +199,7 @@ app.put("/UserPage/AtualizarDadosDoUsuario",(req,res)=>{
         if (resposta.affectedRows > 0) {
             res.json({ mensagem: 'Dados do usuário atualizados com sucesso' });
         } else {
-            res.status(404).json({ mensagem: 'Usuário não encontrado' });
+            res.status(404).json({ mensagem: 'Usuário não encontrado', nome });
         }
     })
 })
