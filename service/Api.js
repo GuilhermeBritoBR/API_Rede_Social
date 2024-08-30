@@ -203,6 +203,27 @@ app.put("/UserPage/AtualizarDadosDoUsuario",VerifyToken, (req,res)=>{
         }
     })
 })
+//atualizar senha do usuárip
+app.put('/UserPage/AtualizarSenhaDoUsuario', VerifyToken, (req,res)=>{
+    //requerindo id do usuario
+    const idDoUsuario = req.user.id;
+    //requerindo os dados do usuario alterados
+    const {senha} = req.body;
+    //comando SLQ
+    const InjetarNovosDados = `UPDATE ${nomeDaTabela} SET senha = SHA2(?, 256) WHERE id = ?`;
+    //injetantado os dados
+    db.query(InjetarNovosDados,[senha, idDoUsuario],(erro, resposta)=>{
+        if(erro){
+            console.error(`Segue o erro: ${erro} no momento de atualizar os dados`);
+            return res.status(500).json({ mensagem: 'Erro ao atualizar dados do usuário'});
+        }
+        if (resposta.affectedRows > 0) {
+            res.json({ mensagem: 'Senha do usuário atualizados com sucesso' });
+        } else {
+            res.status(404).json({ mensagem: 'Usuário não encontrado', nome });
+        }
+    })
+})
 //rodar api
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
