@@ -1,3 +1,7 @@
+A "Api.js" se refere a API de validação e edição destes dados
+
+A "API_Network.js" se refere a API relacionados a rede social, incluindo post, comentários, curtidas e etc.
+
 Os módulos necessários são o Express, Express-Session, BodyParser e Mysql.
 
 Execute este comando antes
