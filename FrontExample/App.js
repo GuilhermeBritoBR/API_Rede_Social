@@ -16,7 +16,6 @@ export default function App() {
       >
       {/* ROTAS */}
       <Stack.Screen name="RegisterPage" component={RegisterPage}/>
-      <Stack.Screen name="LoginPage" component={Login}/>
       </Stack.Navigator>
     </NavigationContainer>
   );

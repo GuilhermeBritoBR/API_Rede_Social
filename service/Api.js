@@ -14,7 +14,12 @@ const PORTA = 3000;
 //criar conexão com mysql
 //NOME DA TABELA PARA INSERIR DADOS DE USUARIO
 var nomeDaTabela = "credenciais";
+var posts = "postagens";
 //variavel DB do mysql
+
+//componentes
+
+
 const db = MySql.createConnection({
     'host': 'localhost',
     'user': 'root',
@@ -224,6 +229,50 @@ app.put('/UserPage/AtualizarSenhaDoUsuario', VerifyToken, (req,res)=>{
         }
     })
 })
+// funções de rede social
+app.post('/Amigos/PostarPublicacao', VerifyToken ,(req,res)=>{
+    const idDoUsuario = req.user.id;
+    const { conteudoDaPublicacao, filmeID, dataDaPublicacao } = req.body;
+
+    const InserirPublicacaoSQL = `INSERT INTO ${posts} (credenciais_id, filme_id, texto, data_postagem) VALUES (?, ? ,? ,? )`;
+
+    db.query(InserirPublicacaoSQL,[idDoUsuario, filmeID, conteudoDaPublicacao, dataDaPublicacao ],(err,resultado)=>{
+        if (err) {
+            console.error('Erro ao inserir publicação:', err);
+            return res.status(500).json({ message: 'Erro ao inserir publicação' });
+        }
+            res.json({ message: resultado });
+        
+    })
+});
+//edição do post
+//receber dados
+app.put('/Amigos/EditarPublicacao', VerifyToken ,(req,res)=>{
+    const idDoUsuario = req.user.id;
+    const { conteudoAntigo, novoConteudo, filmeID } = req.body;
+
+    const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id = ? AND texto = ?`;
+    
+    db.query(buscarPublicacaoSQL, [idDoUsuario, conteudoAntigo], (err, resultados) => {
+        if (err) {
+            console.error('Erro ao buscar publicações:', err);
+            return res.status(500).json({ message: 'Erro ao buscar publicações' });
+        }
+
+        if (resultados.length === 0) {
+            return res.status(404).json({ message: 'Publicação não encontrada' });
+        }
+
+        const publicacao = resultados[0];
+        const atualizarPublicacaoSQL = `UPDATE ${posts} SET texto = ?, filme_id = ? WHERE id = ?`;
+        
+        db.query(atualizarPublicacaoSQL, [novoConteudo, filmeID, publicacao.id], (err) => {
+            if (err) {
+                console.error('Erro ao atualizar publicação:', err);
+                return res.status(500).json({ message: 'Erro ao atualizar publicação' });
+            }
+            res.json({ message: 'Publicação atualizada com sucesso!' });
+});
 //rodar api
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
