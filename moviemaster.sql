@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 18/09/2024 às 20:22
+-- Tempo de geração: 20/09/2024 às 20:37
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.0.30
 
@@ -93,7 +93,8 @@ INSERT INTO `credenciais` (`id`, `nome`, `email`, `senha`) VALUES
 (52, 'teste', 'teste@gmail.com', '289160db0d9f39f9ae1754c4ec9c16f90b50e32e09c5fb5481ae642b3d3d1a36'),
 (53, 'nicolas', 'nicolas', '0c865679be40dfa82096b955071455b688b505a2bdf792225f96bef4a8a8a99e'),
 (54, 'socrates', 'platao', '66318b6ad837b7ab4f2c9ad06eaca468efd3d0b28c7fd53d9ab38fdcfd228f49'),
-(55, 'PaulinhoDaViola', 'PcGamerRTXBR@gmail.com', 'e24df920078c3dd4e7e8d2442f00e5c9ab2a231bb3918d65cc50906e49ecaef4');
+(55, 'PaulinhoDaViola', 'PcGamerRTXBR@gmail.com', 'e24df920078c3dd4e7e8d2442f00e5c9ab2a231bb3918d65cc50906e49ecaef4'),
+(56, 'banquete', 'platao', '710482eaa280e6b7e9ed98958197686ea52772371d2374089e677ff77eae18eb');
 
 -- --------------------------------------------------------
 
@@ -147,20 +148,18 @@ CREATE TABLE `postagens` (
   `credenciais_id` int(11) DEFAULT NULL,
   `filme_id` int(11) DEFAULT NULL,
   `texto` varchar(255) NOT NULL,
-  `data_postagem` datetime DEFAULT current_timestamp()
+  `data_postagem` varchar(255) DEFAULT current_timestamp(),
+  `nota` int(11) NOT NULL,
+  `favorito` tinyint(1) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Despejando dados para a tabela `postagens`
 --
 
-INSERT INTO `postagens` (`id`, `credenciais_id`, `filme_id`, `texto`, `data_postagem`) VALUES
-(1, 52, 9, 'blaaajfdjaf', '2024-09-18 16:33:24'),
-(2, 52, 9, 'blaaajfdjaf', '2024-09-18 16:33:42'),
-(3, 52, 1, 'TESTE BRITO ', '2024-09-18 16:58:42'),
-(4, 15, 1, 'teste brito conta brito ver se o id do user mudou!', '2024-09-18 16:59:59'),
-(5, 15, 1, 'sadasffasfd', '2024-09-18 17:06:11'),
-(6, 15, 1, '', '2024-09-18 17:06:41');
+INSERT INTO `postagens` (`id`, `credenciais_id`, `filme_id`, `texto`, `data_postagem`, `nota`, `favorito`) VALUES
+(28, 52, 1, 'welington', '20/09/2024, 15:26', 2, 1),
+(30, 52, 1, 'dsfdghksufodhsdhw', '20/09/2024, 14:52', 5, 1);
 
 -- --------------------------------------------------------
 
@@ -231,6 +230,7 @@ INSERT INTO `tokensrevogados` (`token`, `tempoExpirado`) VALUES
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI1NjM2MjY0LCJleHAiOjE3MjgyMjgyNjR9.yrwOyOG1VB2M5HcX67IXodPf9tez6R8kBdMjfAq1B7s', '2024-10-06 15:24:24'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI2MDU2MTg3LCJleHAiOjE3Mjg2NDgxODd9.Iw2KiDnrkmUB7BAqN6zMvpFfUKGU2FB7QwexHGMvznI', '2024-10-11 12:03:07'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI2MjI1Nzk5LCJleHAiOjE3Mjg4MTc3OTl9.TJe-Nu845C8cGmjjjHDnOpSx-XyCjmF66KghJdxZVhA', '2024-10-13 11:09:59'),
+('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI2ODM0MjA1LCJleHAiOjE3Mjk0MjYyMDV9.Gg1eJ66YIYXADkE6uqno_gaS9hwXRtcNaKPOoEfcZDs', '2024-10-20 12:10:05'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTQsIm5vbWUiOiJzb2NyYXRlcyIsImlhdCI6MTcyNTYyMTgxNCwiZXhwIjoxNzI4MjEzODE0fQ.trcl1cmmADYXZz0Xcx4ET2wUjb6HJ9nCtTpbPYoqXCU', '2024-10-06 11:23:34'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTUsIm5vbWUiOiJQYXVsaW5obyIsImlhdCI6MTcyNjIyNjQyMSwiZXhwIjoxNzI4ODE4NDIxfQ.pmxrFZBmRLJ9OgId1zbRXv275PZiGTGwvGCiBSRy2Kw', '2024-10-13 11:20:21'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTUsIm5vbWVSZXNwb3N0YSI6IlBhdWxpbmhvRGFWaW9sYSIsImlhdCI6MTcyNjIyNjU2NCwiZXhwIjoxNzI4ODE4NTY0fQ.9l70zMg8_VbJ62Gqg1BpM2fzvxpgGncfHCngf3soQJ4', '2024-10-13 11:22:44'),
@@ -309,7 +309,7 @@ ALTER TABLE `usuarios`
 -- AUTO_INCREMENT de tabela `credenciais`
 --
 ALTER TABLE `credenciais`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT de tabela `curtidas`
@@ -333,7 +333,7 @@ ALTER TABLE `filmes`
 -- AUTO_INCREMENT de tabela `postagens`
 --
 ALTER TABLE `postagens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT de tabela `usuarios`
