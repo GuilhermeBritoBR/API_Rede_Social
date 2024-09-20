@@ -249,30 +249,16 @@ app.post('/Amigos/PostarPublicacao', VerifyToken ,(req,res)=>{
 //receber dados
 app.put('/Amigos/EditarPublicacao', VerifyToken ,(req,res)=>{
     const idDoUsuario = req.user.id;
-    const { conteudoAntigo, novoConteudo, filmeID } = req.body;
-
-    const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id = ? AND texto = ?`;
-    
-    db.query(buscarPublicacaoSQL, [idDoUsuario, conteudoAntigo], (err, resultados) => {
-        if (err) {
-            console.error('Erro ao buscar publicações:', err);
-            return res.status(500).json({ message: 'Erro ao buscar publicações' });
-        }
-
-        if (resultados.length === 0) {
-            return res.status(404).json({ message: 'Publicação não encontrada' });
-        }
-
-        const publicacao = resultados[0];
-        const atualizarPublicacaoSQL = `UPDATE ${posts} SET texto = ?, filme_id = ? WHERE id = ?`;
+    const {id_do_post, conteudoDaPublicacao, filmeID, dataDaPublicacao } = req.body;
+        const atualizarPublicacaoSQL = `UPDATE ${posts} SET texto = ?, filme_id = ?, data_postagem = ? WHERE id = ?`;
         
-        db.query(atualizarPublicacaoSQL, [novoConteudo, filmeID, publicacao.id], (err) => {
+        db.query(atualizarPublicacaoSQL, [conteudoDaPublicacao, filmeID, dataDaPublicacao, id_do_post ], (err) => {
             if (err) {
                 console.error('Erro ao atualizar publicação:', err);
                 return res.status(500).json({ message: 'Erro ao atualizar publicação' });
             }
             res.json({ message: 'Publicação atualizada com sucesso!' });
-})})
+})
 });
 app.get('/Amigos/ReceberPublicacao', VerifyToken, (req,res)=>{
     const idDoUsuario = req.user.id;
@@ -299,6 +285,21 @@ app.get('/Amigos/ReceberPublicacao', VerifyToken, (req,res)=>{
         })
         
     });
+});
+//deletar post
+app.delete('/Amigos/DeletarPublicacao/:id', VerifyToken, (req,res)=>{
+    const id = req.params.id; 
+    const DeletarPostSQL = `DELETE FROM ${posts} WHERE id = ?`;
+    db.query(DeletarPostSQL,[id],(err)=>{
+        if (err) {
+            console.log(`Segue o erro: ${err}`);
+            return res.status(500).json({ message: 'Erro ao excluir a publicação' });
+        }
+        
+        return res.json({ message: 'Publicação excluída com sucesso!' });
+    })
+
+
 })
 //rodar api
 app.listen(PORTA, () => {
