@@ -272,7 +272,34 @@ app.put('/Amigos/EditarPublicacao', VerifyToken ,(req,res)=>{
                 return res.status(500).json({ message: 'Erro ao atualizar publicação' });
             }
             res.json({ message: 'Publicação atualizada com sucesso!' });
+})})
 });
+app.get('/Amigos/ReceberPublicacao', VerifyToken, (req,res)=>{
+    const idDoUsuario = req.user.id;
+
+    const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id = ? `;
+    //AND texto = ? AND filme_id = ? AND data_postagem = ?
+    db.query(buscarPublicacaoSQL, [idDoUsuario], (err, resultados) => {
+        if (err) {
+            console.error('Erro ao buscar publicações:', err);
+            return res.status(500).json({ message: 'Erro ao buscar publicações' });
+        }
+        const buscarNomeSQL = `SELECT * FROM ${nomeDaTabela} WHERE id = ? `;
+        db.query(buscarNomeSQL,[idDoUsuario],(erroSegundaConsulta, resultadoNomeDoUsuario)=>{
+            if (erroSegundaConsulta) {
+                console.error('Erro ao buscar nome:', erroSegundaConsulta);
+                return res.status(500).json({ message: 'Erro ao buscar publicações' });
+            }
+            const publicacoesComNome = resultados.map(publicacao => ({
+                ...publicacao,
+                nomeDoUsuario: resultadoNomeDoUsuario[0]?.nome // Adiciona o nome do usuário
+            }));
+
+            res.json(publicacoesComNome);
+        })
+        
+    });
+})
 //rodar api
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
