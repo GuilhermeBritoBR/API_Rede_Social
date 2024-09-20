@@ -232,11 +232,11 @@ app.put('/UserPage/AtualizarSenhaDoUsuario', VerifyToken, (req,res)=>{
 // funções de rede social
 app.post('/Amigos/PostarPublicacao', VerifyToken ,(req,res)=>{
     const idDoUsuario = req.user.id;
-    const { conteudoDaPublicacao, filmeID, dataDaPublicacao } = req.body;
+    const { conteudoDaPublicacao, filmeID, dataDaPublicacao, nota, favorito } = req.body;
 
-    const InserirPublicacaoSQL = `INSERT INTO ${posts} (credenciais_id, filme_id, texto, data_postagem) VALUES (?, ? ,? ,? )`;
+    const InserirPublicacaoSQL = `INSERT INTO ${posts} (credenciais_id, filme_id, texto, data_postagem, nota, favorito) VALUES (?, ? ,? ,?,?,? )`;
 
-    db.query(InserirPublicacaoSQL,[idDoUsuario, filmeID, conteudoDaPublicacao, dataDaPublicacao ],(err,resultado)=>{
+    db.query(InserirPublicacaoSQL,[idDoUsuario, filmeID, conteudoDaPublicacao, dataDaPublicacao, nota, favorito ],(err,resultado)=>{
         if (err) {
             console.error('Erro ao inserir publicação:', err);
             return res.status(500).json({ message: 'Erro ao inserir publicação' });
@@ -249,10 +249,10 @@ app.post('/Amigos/PostarPublicacao', VerifyToken ,(req,res)=>{
 //receber dados
 app.put('/Amigos/EditarPublicacao', VerifyToken ,(req,res)=>{
     const idDoUsuario = req.user.id;
-    const {id_do_post, conteudoDaPublicacao, filmeID, dataDaPublicacao } = req.body;
-        const atualizarPublicacaoSQL = `UPDATE ${posts} SET texto = ?, filme_id = ?, data_postagem = ? WHERE id = ?`;
+    const {id_do_post, conteudoDaPublicacao, filmeID, dataDaPublicacao, nota, favorito } = req.body;
+        const atualizarPublicacaoSQL = `UPDATE ${posts} SET texto = ?, filme_id = ?, data_postagem = ?, nota = ?, favorito = ? WHERE id = ?`;
         
-        db.query(atualizarPublicacaoSQL, [conteudoDaPublicacao, filmeID, dataDaPublicacao, id_do_post ], (err) => {
+        db.query(atualizarPublicacaoSQL, [conteudoDaPublicacao, filmeID, dataDaPublicacao,nota, favorito,  id_do_post ], (err) => {
             if (err) {
                 console.error('Erro ao atualizar publicação:', err);
                 return res.status(500).json({ message: 'Erro ao atualizar publicação' });
