@@ -232,11 +232,11 @@ app.put('/UserPage/AtualizarSenhaDoUsuario', VerifyToken, (req,res)=>{
 // funções de rede social
 app.post('/Amigos/PostarPublicacao', VerifyToken ,(req,res)=>{
     const idDoUsuario = req.user.id;
-    const { conteudoDaPublicacao, filmeID, dataDaPublicacao, nota, favorito } = req.body;
+    const { conteudoDaPublicacao, filmeID, dataDaPublicacao, nota, favorito, autor, tituloDoFilme, likesDaPostagem, capaDoFilme } = req.body;
 
-    const InserirPublicacaoSQL = `INSERT INTO ${posts} (credenciais_id, filme_id, texto, data_postagem, nota, favorito) VALUES (?, ? ,? ,?,?,? )`;
+    const InserirPublicacaoSQL = `INSERT INTO ${posts} (credenciais_id, filme_id, texto, data_postagem, nota, favorito, autor,tituloDoFilme,  likesDaPostagem, capaDoFilme) VALUES (?,?,?, ?, ?, ? ,? ,?,?,? )`;
 
-    db.query(InserirPublicacaoSQL,[idDoUsuario, filmeID, conteudoDaPublicacao, dataDaPublicacao, nota, favorito ],(err,resultado)=>{
+    db.query(InserirPublicacaoSQL,[idDoUsuario, filmeID, conteudoDaPublicacao, dataDaPublicacao, nota, favorito, autor, tituloDoFilme, likesDaPostagem, capaDoFilme ],(err,resultado)=>{
         if (err) {
             console.error('Erro ao inserir publicação:', err);
             return res.status(500).json({ message: 'Erro ao inserir publicação' });
