@@ -302,6 +302,16 @@ app.delete('/Amigos/DeletarPublicacao/:id', VerifyToken, (req,res)=>{
 
 })
 //rodar api
+
+//funções de pesquisa
+app.get('/PesquisarNomesDeUsuarios', VerifyToken, (req,res)=>{
+    const { nome } = req.query;
+  db.query(`SELECT * FROM ${nomeDaTabela} WHERE nome LIKE ?`, [`%${nome}%`], (err, results) => {
+    if (err) return res.status(500).json(err);
+    res.json(results);
+  });
+
+});
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
   });
