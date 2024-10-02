@@ -3,6 +3,7 @@ const session = require('express-session');
 const parser = require('body-parser');
 const MySql = require('mysql');
 const cors = require('cors');
+const multer = require('multer');
 //este serve para gerar token do usuario
 const jwt = require('jsonwebtoken');
 //criando aplicação
@@ -286,6 +287,31 @@ app.get('/Amigos/ReceberPublicacao', VerifyToken, (req,res)=>{
         
     });
 });
+app.get('/Amigos/ReceberPublicacaoDosAmigos/:id', VerifyToken, (req,res)=>{
+    const id = req.params.id;
+    const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id = ? `;
+    //AND texto = ? AND filme_id = ? AND data_postagem = ?
+    db.query(buscarPublicacaoSQL, [id], (err, resultados) => {
+        if (err) {
+            console.error('Erro ao buscar publicações:', err);
+            return res.status(500).json({ message: 'Erro ao buscar publicações' });
+        }
+        const buscarNomeSQL = `SELECT * FROM ${nomeDaTabela} WHERE id = ? `;
+        db.query(buscarNomeSQL,[id],(erroSegundaConsulta, resultadoNomeDoUsuario)=>{
+            if (erroSegundaConsulta) {
+                console.error('Erro ao buscar nome:', erroSegundaConsulta);
+                return res.status(500).json({ message: 'Erro ao buscar publicações' });
+            }
+            const publicacoesComNome = resultados.map(publicacao => ({
+                ...publicacao,
+                nomeDoUsuario: resultadoNomeDoUsuario[0]?.nome // Adiciona o nome do usuário
+            }));
+
+            res.json(publicacoesComNome);
+        })
+        
+    });
+});
 //deletar post
 app.delete('/Amigos/DeletarPublicacao/:id', VerifyToken, (req,res)=>{
     const id = req.params.id; 
@@ -308,10 +334,45 @@ app.get('/PesquisarNomesDeUsuarios', VerifyToken, (req,res)=>{
     const { nome } = req.query;
   db.query(`SELECT * FROM ${nomeDaTabela} WHERE nome LIKE ?`, [`%${nome}%`], (err, results) => {
     if (err) return res.status(500).json(err);
-    res.json(results);
+    res.json(results); 
+  });
+});
+  app.get('/Perfil/BuscarMeusFilmesFavoritos', VerifyToken, (req,res)=>{
+    const id = req.user.id;
+    const comandoParaBuscar = `SELECT * FROM postagens WHERE favorito = 1 AND credenciais_id = ?`;
+    db.query(comandoParaBuscar,[id],(err,resposta)=>{
+        if(err){
+            console.log(`Segue o erro: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar favoritos' });
+        }
+        //filme_id, capaDoFilme, tituloDoFilme 
+        return res.json({ mensagem: 'Dados coletados com sucesso', resposta });
+
+    })
   });
 
-});
+//upload das fotos
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, 'uploads/'); // Pasta onde as imagens serão salvas
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname)); // Renomeia o arquivo
+    }
+  });
+  
+  // Inicializa o multer com a configuração de armazenamento
+  const upload = multer({ storage: storage });
+  
+  // Rota para upload de imagem
+  app.post('/EnvioDaFoto', upload.single('image'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).send('Nenhuma imagem foi enviada.');
+    }
+    res.send(`Imagem salva com sucesso: ${req.file.path}`);
+  });
+
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
   });
