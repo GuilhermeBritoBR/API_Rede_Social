@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 20/09/2024 às 20:37
+-- Tempo de geração: 04/10/2024 às 20:42
 -- Versão do servidor: 10.4.32-MariaDB
 -- Versão do PHP: 8.0.30
 
@@ -24,6 +24,25 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `amigos`
+--
+
+CREATE TABLE `amigos` (
+  `id` int(11) NOT NULL,
+  `credenciais_id` int(11) NOT NULL,
+  `amigos` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`amigos`))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Despejando dados para a tabela `amigos`
+--
+
+INSERT INTO `amigos` (`id`, `credenciais_id`, `amigos`) VALUES
+(3, 52, '[28]');
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `credenciais`
 --
 
@@ -31,70 +50,9 @@ CREATE TABLE `credenciais` (
   `id` int(11) NOT NULL,
   `nome` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
-  `senha` varchar(255) NOT NULL
+  `senha` varchar(255) NOT NULL,
+  `foto` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Despejando dados para a tabela `credenciais`
---
-
-INSERT INTO `credenciais` (`id`, `nome`, `email`, `senha`) VALUES
-(1, 'teste1234', 'testedhdjdjei', '46070d4bf934fb0d4b06d9e2c46e346944e322444900a435d7d9a95e6d7435f5'),
-(2, 'teste12213443', 'teste432234432', '782be85dbdb495156f8fe3ff5005afef53d6c96f9e694dc83d2a58c3a59193d9'),
-(3, 'brito', 'guilhfdshfdhs@hfjds', '9ef63e4b62acf2456b0fe4b0db3f3696ea63a69685a3023d36e033cea197142b'),
-(4, 'brito', 'guilhfdshfdhs@hfjds', '9ef63e4b62acf2456b0fe4b0db3f3696ea63a69685a3023d36e033cea197142b'),
-(5, 'Dhedhdhdd', 'Fdhxhdh@hfjfjd', '0cf07a77fbdfcb6645fe8a4daab68c7b179878e76e28d2d61138a91e2b934fed'),
-(6, 'Dhedhdhdd', 'MagoNicolaldo', '0cf07a77fbdfcb6645fe8a4daab68c7b179878e76e28d2d61138a91e2b934fed'),
-(7, 'Gui Brito', 'Guilherme@briti', '29649d4224dc16146cd4ef32c19c744e0a224d7e8622f041ba8055f0e998c6db'),
-(8, 'Nicolas', 'MagoNicolaldo', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(9, 'Pedro', 'Pedro@gmail.com', 'f7308341937e89daf1140b6c4636e9a33736e187e2250d7b661d1304cad6c4fc'),
-(10, 'sdsadasd', 'dsasaasdda', '92f15cbd78bf55ff08079ca4549a64b793ebf372d0193f496d8c72a59d1ce36e'),
-(11, 'GuilhermeBrito', 'guilhermesantiagodebrito@gmail.com', 'ebdf496f67651cddf6aaa1f0b130f1b99ce9e2e93dc2503d926edcff15aee668'),
-(12, 'Naruto', 'Flamengo', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(13, 'Hdjdjdjdbdb', 'Teesteebsbssb', '7095aed4d14b32ef5e7a9c6bd954506d7593fd3e912b9e3a0d1e1c7d1ebeca95'),
-(14, 'brito', 'brito', 'brito'),
-(15, 'brito', 'brito', '04e60ff82d01c521c578eec39c415b99512c658feb264ef03cd1a5efdbe893b3'),
-(16, 'Brito', 'Brito', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(17, 'brito123ddddddddddddcccccccccccccc', 'flamengosdddddddddddddddsssssss', 'd58d736c7a967fb5f307951932734f8b0594725faa5011dbb66a8c538e635fb6'),
-(18, 'aaa', 'aaa', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(19, 'Vermelho', 'goku', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(20, 'punpun', 'nicolas@gmail.com', '81edcda020d618244e9bc2fd65e69cd16e042349d6eba134132b3a4521380b0c'),
-(21, 'brito', 'nko@gmail.com', '4b03dcd4a2ad0fd235b38b0ceb7a7bef5b848d5ae63d58fcbec4178b61b3a9e9'),
-(22, 'nicolas', 'nicolas@gmail.com', 'd6d34583ad7ff5022ab7bbd5a22798035a69851dd69676d9bca708baf0c967b3'),
-(23, 'Brito', 'Guilherme@gmail.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(24, 'Gigi', 'giovanna@gmail.com', 'ee79976c9380d5e337fc1c095ece8c8f22f91f306ceeb161fa51fecede2c4ba1'),
-(25, 'pedro', 'pedro@ph.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(26, 'nicolas', 'nicolas@gmail.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(27, 'nicolas', 'nicolas@gmail.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(28, 'jesus', 'nicolas@gmail.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(29, 'brito', 'guilherme@gmail.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(30, 'Lixo', 'Lixo@hotmail.com', '27e207653fbc09a0c4efa7671e3e6ed02ec74dde0990485c221dd4f1f2bbd0ca'),
-(31, 'lixo@hotmail.com', 'Lixo@hotmail.com', '27e207653fbc09a0c4efa7671e3e6ed02ec74dde0990485c221dd4f1f2bbd0ca'),
-(32, 'lixo@hotmail.com', 'Lixo@hotmail.com', '27e207653fbc09a0c4efa7671e3e6ed02ec74dde0990485c221dd4f1f2bbd0ca'),
-(33, 'lixo@hotmail.com', 'Lixo@hotmail.com', '27e207653fbc09a0c4efa7671e3e6ed02ec74dde0990485c221dd4f1f2bbd0ca'),
-(34, 'lixo@hotmail.com', 'Lixo@hotmail.com', '27e207653fbc09a0c4efa7671e3e6ed02ec74dde0990485c221dd4f1f2bbd0ca'),
-(35, 'lixo@hotmail.com', 'Lixo@hotmail.com', '27e207653fbc09a0c4efa7671e3e6ed02ec74dde0990485c221dd4f1f2bbd0ca'),
-(36, 'Ribas', 'Ribamar@gmail.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(37, 'Joao Pedro', 'joaopedro@gmail.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(38, 'mate', 'matheuz@diniz', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(39, 'nicoldsajhdasfsadsda', 'nicolasdasdasdas', 'e7fb758c35972aecfa9755c1cd7609704ca31f570d1638f0ce9a8298a689d595'),
-(40, 'fadfdafaffaf', 'fsaadffsfsafas', '1ed8480c7407e040dd63e3905c019ed657ca094201b67ad88e939cd7b5fbb107'),
-(41, 'asfassafasfs', 'sadadfafsjfasfass', '8fa4388e27cecebd0c30bfc51420ff6cfbaedf3d43ddf53721668ac048920a91'),
-(42, 'asffsaffasf', 'sadffsf', '29cd2b8412e67d1878c3e841647e6272c216c4bf1d0a2195def7726cf821dcb3'),
-(43, 'brito', 'afsj]dgghgshsaddsagh', 'ad7be9c117caee5f5761f2bd20a7faf65d85d1cf8d0e6996a09e87db80ce34ad'),
-(44, 'sdvkuhfdigfhuçsfjoi', 'dfsiohegtdohzodhdgzhu', '4aa7d9d6bd7fbfdfc5e81eddf4cdb17c2a4ab3689e33837b21737862a457e7af'),
-(45, 'TONO', 'ANABANANA@GMAIL/COM', '52cbca6a093548ea58aff698c84d415abac4fb52810a03cdec6848ec04d9d59a'),
-(46, 'PcGamerBrazil', 'PauloCezar@sesi.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(47, 'PcGamerBrazil', 'PauloCezar@sesi.com', 'ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f'),
-(48, 'Brito132', 'BritoFlamengo@gmail.comhhj', '9992594065d5b41a85d8597b69946cb542f0af6f0dfdf8ab9e1d3fc73540cf6c'),
-(49, 'Eidhdhshsh', 'Ejdjeheheh', '3e7590dfa462fe2a392793d2ac3f77fdbf2cd1630012da287bd854f8aff6d72b'),
-(50, 'britoerroneo', 'brito', 'cecfc6b3859482bb15b81d433114ab5961610bbb651e6803b128914b7b1c989e'),
-(51, 'Brito', 'Brito', '021ff940c3bba210e31c2be521e607d23b8335a08a153fe654df1ef63ac7914a'),
-(52, 'teste', 'teste@gmail.com', '289160db0d9f39f9ae1754c4ec9c16f90b50e32e09c5fb5481ae642b3d3d1a36'),
-(53, 'nicolas', 'nicolas', '0c865679be40dfa82096b955071455b688b505a2bdf792225f96bef4a8a8a99e'),
-(54, 'socrates', 'platao', '66318b6ad837b7ab4f2c9ad06eaca468efd3d0b28c7fd53d9ab38fdcfd228f49'),
-(55, 'PaulinhoDaViola', 'PcGamerRTXBR@gmail.com', 'e24df920078c3dd4e7e8d2442f00e5c9ab2a231bb3918d65cc50906e49ecaef4'),
-(56, 'banquete', 'platao', '710482eaa280e6b7e9ed98958197686ea52772371d2374089e677ff77eae18eb');
 
 -- --------------------------------------------------------
 
@@ -125,6 +83,19 @@ CREATE TABLE `descurtidas` (
 -- --------------------------------------------------------
 
 --
+-- Estrutura para tabela `favoritos`
+--
+
+CREATE TABLE `favoritos` (
+  `id` int(11) NOT NULL,
+  `idFilme` int(11) NOT NULL,
+  `titulo` varchar(255) NOT NULL,
+  `capa` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estrutura para tabela `filmes`
 --
 
@@ -150,16 +121,33 @@ CREATE TABLE `postagens` (
   `texto` varchar(255) NOT NULL,
   `data_postagem` varchar(255) DEFAULT current_timestamp(),
   `nota` int(11) NOT NULL,
-  `favorito` tinyint(1) NOT NULL
+  `favorito` tinyint(1) NOT NULL,
+  `autor` varchar(255) NOT NULL,
+  `tituloDoFilme` varchar(255) NOT NULL,
+  `likesDaPostagem` int(11) NOT NULL,
+  `capaDoFilme` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Despejando dados para a tabela `postagens`
 --
 
-INSERT INTO `postagens` (`id`, `credenciais_id`, `filme_id`, `texto`, `data_postagem`, `nota`, `favorito`) VALUES
-(28, 52, 1, 'welington', '20/09/2024, 15:26', 2, 1),
-(30, 52, 1, 'dsfdghksufodhsdhw', '20/09/2024, 14:52', 5, 1);
+INSERT INTO `postagens` (`id`, `credenciais_id`, `filme_id`, `texto`, `data_postagem`, `nota`, `favorito`, `autor`, `tituloDoFilme`, `likesDaPostagem`, `capaDoFilme`) VALUES
+(43, 52, 519182, 'asdasdasddasdsadsadasd', '02/10/2024, 10:33', 0, 0, 'Brito', 'Meu Malvado Favorito 4', 0, 'https://image.tmdb.org/t/p/w500/jWYTtmxSuWVXP22hxAeXdQZLZrh.jpg'),
+(44, 52, 1184918, 'robo chato', '02/10/2024, 10:38', 1, 0, 'Brito', 'Robô Selvagem', 0, 'https://image.tmdb.org/t/p/w500/pG9Vfb3r0Nwd0QO7g01CNaOowXX.jpg'),
+(45, 57, 573435, 'Bom', '02/10/2024, 09:50', 0, 0, 'Pedroh', 'Bad Boys: Até o Fim', 0, 'https://image.tmdb.org/t/p/w500/ak6VZDHms5T4p0eFISk336kqjR6.jpg'),
+(46, 57, 573435, 'Bom', '02/10/2024, 09:50', 4, 0, 'Pedroh', 'Bad Boys: Até o Fim', 0, 'https://image.tmdb.org/t/p/w500/ak6VZDHms5T4p0eFISk336kqjR6.jpg'),
+(47, 57, 573435, 'Bom', '02/10/2024, 09:51', 4, 0, 'Pedroh', 'Bad Boys: Até o Fim', 0, 'https://image.tmdb.org/t/p/w500/ak6VZDHms5T4p0eFISk336kqjR6.jpg'),
+(48, 57, 573435, 'Bom', '02/10/2024, 09:51', 4, 0, 'Pedroh', 'Bad Boys: Até o Fim', 0, 'https://image.tmdb.org/t/p/w500/ak6VZDHms5T4p0eFISk336kqjR6.jpg'),
+(49, 57, 857, 'Bomdemais', '02/10/2024, 09:54', 4, 1, 'Pedroh', 'O Resgate do Soldado Ryan', 0, 'https://image.tmdb.org/t/p/w500/hMLxNLCXRDd62acfCBn6mIyW1HU.jpg'),
+(50, 52, 1329912, 'efsdfdsfsfsdfss', '02/10/2024, 12:03', 5, 1, 'Brito', 'Kung Fu Games', 0, 'https://image.tmdb.org/t/p/w500/yjDdBBUEBMvyUiVohZ8T7W2IFl6.jpg'),
+(51, 58, 573435, 'Bad Boys What you Gonna Do When they come for you', '02/10/2024, 12:14', 5, 0, 'João Pedro', 'Bad Boys: Até o Fim', 0, 'https://image.tmdb.org/t/p/w500/ak6VZDHms5T4p0eFISk336kqjR6.jpg'),
+(52, 58, 573435, 'Bad Boys What you Gonna Do When they come for you', '02/10/2024, 12:14', 5, 1, 'João Pedro', 'Bad Boys: Até o Fim', 0, 'https://image.tmdb.org/t/p/w500/ak6VZDHms5T4p0eFISk336kqjR6.jpg'),
+(53, 59, 12, 'bom demias', '02/10/2024, 12:18', 5, 1, 'Isabela', 'Procurando Nemo', 0, 'https://image.tmdb.org/t/p/w500/5jrPMq7IMLTqcuPDlK6jfruEbpq.jpg'),
+(54, 52, 18491, 'o nicolas viu', '02/10/2024, 13:11', 1, 0, 'Brito', 'Neon Genesis Evangelion: O Fim do Evangelho', 0, 'https://image.tmdb.org/t/p/w500/txDIbdn7p6eYdFMVoHbd4wwrNkM.jpg'),
+(55, 52, 1184918, 'dsdsdsdsddsdddsdd', '02/10/2024, 13:47', 5, 1, 'Brito', 'Robô Selvagem', 0, 'https://image.tmdb.org/t/p/w500/pG9Vfb3r0Nwd0QO7g01CNaOowXX.jpg'),
+(56, 52, 1184918, 'dahora', '02/10/2024, 13:58', 5, 1, 'Brito', 'Robô Selvagem', 0, 'https://image.tmdb.org/t/p/w500/pG9Vfb3r0Nwd0QO7g01CNaOowXX.jpg'),
+(57, 52, 877817, 'SDASADASDDADASD', '04/10/2024, 13:10', 4, 1, 'Brito', 'Lobos', 0, 'https://image.tmdb.org/t/p/w500/5LvefZZsapIsOIckLZHbYlwCAkm.jpg');
 
 -- --------------------------------------------------------
 
@@ -223,6 +211,7 @@ INSERT INTO `tokensrevogados` (`token`, `tempoExpirado`) VALUES
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NDYsIm5vbWVSZXNwb3N0YSI6IlBjR2FtZXJCcmF6aWwiLCJpYXQiOjE3MjQ0MzcxODIsImV4cCI6MTcyNzAyOTE4Mn0.04Zvl5gmeGMf9B9tgl61uJ0FjHvsqT_B-WW7VNfuDPU', '2024-09-22 18:19:42'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NDYsIm5vbWVSZXNwb3N0YSI6IlBjR2FtZXJCcmF6aWwiLCJpYXQiOjE3MjQ0MzcyODUsImV4cCI6MTcyNzAyOTI4NX0.wolXbqXmNbW64tm4OfKJKKWMJs7glSib2RR3dRrqzZA', '2024-09-22 18:21:25'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTEsIm5vbWUiOiJCcml0byIsImlhdCI6MTcyNTAzNTk0NSwiZXhwIjoxNzI3NjI3OTQ1fQ.mRlMA_XVCoBAaFYHvod_UPA3KOrNTSYsALOaj-GjvcI', '2024-09-29 16:39:05'),
+('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6IkJyaXRvIiwiaWF0IjoxNzI4MDQyMDAzLCJleHAiOjE3MzA2MzQwMDN9.iqk2p9Fdpd7o0UQozMUGI2RLFLpxJOAy6H822Q40Coo', '2024-11-03 11:40:03'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI1NDU0MzMxLCJleHAiOjE3MjgwNDYzMzF9.PjfkE_cr78qc5E005f4TEag7wEHWDjN87WKqS4m6dBA', '2024-10-04 12:52:11'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI1NDU0OTAxLCJleHAiOjE3MjgwNDY5MDF9.wvwxwBsySv8OLAXDttfiMDgTWU3qArru9FkK9cQOgFY', '2024-10-04 13:01:41'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI1NDU3ODMxLCJleHAiOjE3MjgwNDk4MzF9.Lu8BP9DfqG60WjPtopU2jx3KVTpJLVvj_N0KHCeOv3w', '2024-10-04 13:50:31'),
@@ -231,6 +220,7 @@ INSERT INTO `tokensrevogados` (`token`, `tempoExpirado`) VALUES
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI2MDU2MTg3LCJleHAiOjE3Mjg2NDgxODd9.Iw2KiDnrkmUB7BAqN6zMvpFfUKGU2FB7QwexHGMvznI', '2024-10-11 12:03:07'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI2MjI1Nzk5LCJleHAiOjE3Mjg4MTc3OTl9.TJe-Nu845C8cGmjjjHDnOpSx-XyCjmF66KghJdxZVhA', '2024-10-13 11:09:59'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI2ODM0MjA1LCJleHAiOjE3Mjk0MjYyMDV9.Gg1eJ66YIYXADkE6uqno_gaS9hwXRtcNaKPOoEfcZDs', '2024-10-20 12:10:05'),
+('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTIsIm5vbWVSZXNwb3N0YSI6InRlc3RlIiwiaWF0IjoxNzI3Mjg2MTkxLCJleHAiOjE3Mjk4NzgxOTF9.3HvpNBpslYegke7X_6qGRB51rwmhY0cHTJT-T8_fKJU', '2024-10-25 17:43:11'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTQsIm5vbWUiOiJzb2NyYXRlcyIsImlhdCI6MTcyNTYyMTgxNCwiZXhwIjoxNzI4MjEzODE0fQ.trcl1cmmADYXZz0Xcx4ET2wUjb6HJ9nCtTpbPYoqXCU', '2024-10-06 11:23:34'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTUsIm5vbWUiOiJQYXVsaW5obyIsImlhdCI6MTcyNjIyNjQyMSwiZXhwIjoxNzI4ODE4NDIxfQ.pmxrFZBmRLJ9OgId1zbRXv275PZiGTGwvGCiBSRy2Kw', '2024-10-13 11:20:21'),
 ('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NTUsIm5vbWVSZXNwb3N0YSI6IlBhdWxpbmhvRGFWaW9sYSIsImlhdCI6MTcyNjIyNjU2NCwiZXhwIjoxNzI4ODE4NTY0fQ.9l70zMg8_VbJ62Gqg1BpM2fzvxpgGncfHCngf3soQJ4', '2024-10-13 11:22:44'),
@@ -255,6 +245,12 @@ CREATE TABLE `usuarios` (
 --
 
 --
+-- Índices de tabela `amigos`
+--
+ALTER TABLE `amigos`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Índices de tabela `credenciais`
 --
 ALTER TABLE `credenciais`
@@ -275,6 +271,12 @@ ALTER TABLE `descurtidas`
   ADD PRIMARY KEY (`id`),
   ADD KEY `usuario_id` (`usuario_id`),
   ADD KEY `post_id` (`post_id`);
+
+--
+-- Índices de tabela `favoritos`
+--
+ALTER TABLE `favoritos`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Índices de tabela `filmes`
@@ -306,10 +308,16 @@ ALTER TABLE `usuarios`
 --
 
 --
+-- AUTO_INCREMENT de tabela `amigos`
+--
+ALTER TABLE `amigos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT de tabela `credenciais`
 --
 ALTER TABLE `credenciais`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT de tabela `curtidas`
@@ -324,6 +332,12 @@ ALTER TABLE `descurtidas`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de tabela `favoritos`
+--
+ALTER TABLE `favoritos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de tabela `filmes`
 --
 ALTER TABLE `filmes`
@@ -333,7 +347,7 @@ ALTER TABLE `filmes`
 -- AUTO_INCREMENT de tabela `postagens`
 --
 ALTER TABLE `postagens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT de tabela `usuarios`

@@ -28,7 +28,11 @@ const db = MySql.createConnection({
     'database': `MovieMaster`
 })
 //cors
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:8081', // Substitua pela origem do seu frontend
+    methods: ['GET', 'PUT', 'POST', 'DELETE'], // Métodos permitidos
+    allowedHeaders: ['Content-Type', 'Authorization'] // Cabeçalhos permitidos
+}));
 // Usando o middleware para parsear JSON
 app.use(express.json());
 
@@ -57,18 +61,40 @@ function VerifyToken(req,res,next){
         req.user = user;
         next();
     })})};
-
+//upload das fotos
+ const storage = multer.diskStorage({
+     destination: (req, file, cb) => {
+       cb(null, 'uploads/'); // Pasta onde as imagens serão salvas
+     },
+     filename: (req, file, cb) => {
+       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+       cb(null, uniqueSuffix + path.extname(file.originalname)); // Renomeia o arquivo
+     }
+   });
+  
+  // Inicializa o multer com a configuração de armazenamento
+  const upload = multer({ storage });   
+  
+  // Rota para upload de imagem
+  app.post('/EnvioDaFoto', upload.single('image'), (req, res) => {
+     if (!req.file) {
+       return res.status(400).send('Nenhuma imagem foi enviada.');
+     }
+     res.send(`Imagem salva com sucesso: ${req.file.path}`);
+   
+  });
 
 //Cadastro dos dados
 app.post('/registerPage/cadastro',(req,res)=>{
     //coletando nome e senha
     const {nome,email, senha}= req.body;
+    const caminhoFoto = req.file ? req.file.path : null;
     //verificando valor destas
     console.log(`Respectivamente as variaveis: ${nome,email, senha}`);
     //variavel com comando SLQ para inserir dados na tabela credenciais
-    const InserirDadosSQL = `INSERT INTO ${nomeDaTabela} (nome, email, senha) VALUES (?,?,SHA2(?, 256))`;
+    const InserirDadosSQL = `INSERT INTO ${nomeDaTabela} (nome, email, senha, foto) VALUES (?,?,SHA2(?, 256),?)`;
     //salvar esses dados em um banco de dados próprio do usuário
-    db.query(InserirDadosSQL,[nome,email,senha],(err,resposta)=>{
+    db.query(InserirDadosSQL,[nome,email,senha, caminhoFoto],(err,resposta)=>{
         if(err){
             console.log(`Erro Ao inserir Dados na tabela de cadastro na RegisterPage, segue o erro: ${err}`);
             return;
@@ -350,28 +376,114 @@ app.get('/PesquisarNomesDeUsuarios', VerifyToken, (req,res)=>{
 
     })
   });
+  app.get('/Pesquisa/BuscarFilmesFavoritosDosAmigos/:id', VerifyToken, (req,res)=>{
+    const id = req.params.id;
+    const comandoParaBuscar = `SELECT * FROM postagens WHERE favorito = 1 AND credenciais_id = ?`;
+    db.query(comandoParaBuscar,[id],(err,resposta)=>{
+        if(err){
+            console.log(`Segue o erro: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar favoritos' });
+        }
+        //filme_id, capaDoFilme, tituloDoFilme 
+        return res.json({ mensagem: 'Dados coletados com sucesso', resposta });
 
-//upload das fotos
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, 'uploads/'); // Pasta onde as imagens serão salvas
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + path.extname(file.originalname)); // Renomeia o arquivo
-    }
+    })
   });
-  
-  // Inicializa o multer com a configuração de armazenamento
-  const upload = multer({ storage: storage });
-  
-  // Rota para upload de imagem
-  app.post('/EnvioDaFoto', upload.single('image'), (req, res) => {
-    if (!req.file) {
-      return res.status(400).send('Nenhuma imagem foi enviada.');
-    }
-    res.send(`Imagem salva com sucesso: ${req.file.path}`);
-  });
+//adicionar amigo
+app.put('/Amigos/AdicionarAmigo',VerifyToken,(req,res)=>{
+    const {id_amigo} = req.body;
+    const id = req.user.id;
+    const checkSql = `SELECT amigos FROM amigos WHERE credenciais_id = ?`;
+    db.query(checkSql, [id], (err, resultados) => {
+        if (err) {
+            console.log(`Erro ao verificar amigos: ${err}`);
+            return res.status(500).json({ message: 'Erro ao verificar amigos' });
+        }
+
+        // Se não houver amigos, adicione o novo amigo
+        if (resultados.length === 0 || resultados[0].amigos === null) {
+            const sql = `INSERT INTO amigos (credenciais_id, amigos) VALUES (?, JSON_ARRAY(?))`;
+            db.query(sql, [id, id_amigo], (err, resposta) => {
+                if (err) {
+                    console.log(`Erro ao adicionar amigo: ${err}`);
+                    return res.status(500).json({ message: 'Erro ao adicionar amigo' });
+                }
+
+                return res.json({ mensagem: 'Amigo adicionado' });
+            });
+        } else {
+            // Se já houver amigos, apenas adicione o novo amigo à lista
+            const sql = `UPDATE amigos SET amigos = JSON_ARRAY_APPEND(amigos, '$', ?) WHERE credenciais_id = ?`;
+            db.query(sql, [id_amigo, id], (err, resposta) => {
+                if (err) {
+                    console.log(`Erro ao adicionar amigo: ${err}`);
+                    return res.status(500).json({ message: 'Erro ao adicionar amigo' });
+                }
+
+                return res.json({ mensagem: 'Amigo adicionado' });
+            });
+        }
+    });
+});
+
+//remover amigo
+app.put('/Amigos/RemoverAmigo', VerifyToken, (req, res) => {
+    const { id_amigo } = req.body;
+    const id = req.user.id;
+    const checkSql = `SELECT amigos FROM amigos WHERE credenciais_id = ?`;
+
+    db.query(checkSql, [id], (err, resultados) => {
+        if (err) {
+            console.log(`Erro ao verificar amigos: ${err}`);
+            return res.status(500).json({ message: 'Erro ao verificar amigos' });
+        }
+
+        if (resultados.length === 0 || resultados[0].amigos === null) {
+            return res.status(400).json({ message: 'Nenhum amigo encontrado para remover' });
+        } else {
+            const amigos = JSON.parse(resultados[0].amigos);
+
+            // Verifica se o amigo está na lista
+            if (!amigos.includes(id_amigo)) {
+                return res.status(400).json({ message: 'Amigo não encontrado na lista' });
+            }
+
+            // Remove o amigo da lista
+            const novosAmigos = amigos.filter(amigo => amigo !== id_amigo);
+
+            const sql = `UPDATE amigos SET amigos = ? WHERE credenciais_id = ?`;
+            db.query(sql, [JSON.stringify(novosAmigos), id], (err, resposta) => {
+                if (err) {
+                    console.log(`Erro ao remover amigo: ${err}`);
+                    return res.status(500).json({ message: 'Erro ao remover amigo' });
+                }
+
+                return res.json({ message: 'Amigo removido com sucesso' });
+            });
+        }
+    });
+});
+//verificas amigos
+app.get('/Amigos/VerificarAmigos', VerifyToken, (req, res) => {
+    const id = req.user.id;
+    const sql = `SELECT * FROM amigos WHERE credenciais_id = ?`;
+
+    db.query(sql, [id], (err, resultados) => {
+        if (err) {
+            console.log(`Erro ao buscar amigos: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar amigos' });
+        }
+
+        if (resultados.length === 0 || resultados[0].amigos === null) {
+            return res.json({ amigos: [] }); // Retorna uma lista vazia se não houver amigos
+        } else {
+            const amigos = JSON.parse(resultados[0].amigos);
+            return res.json({ amigos });
+        }
+    });
+});
+
+
 
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
