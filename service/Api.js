@@ -1,11 +1,14 @@
 const express = require('express');
+const multer = require('multer');
 const session = require('express-session');
 const parser = require('body-parser');
 const MySql = require('mysql');
 const cors = require('cors');
-const multer = require('multer');
+
 //este serve para gerar token do usuario
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
 //criando aplicação
 const app = express();
 //rotas da aplicação
@@ -16,11 +19,12 @@ const PORTA = 3000;
 //NOME DA TABELA PARA INSERIR DADOS DE USUARIO
 var nomeDaTabela = "credenciais";
 var posts = "postagens";
-//variavel DB do mysql
+var uploadDir = path.join(__dirname, 'uploads');
 
-//componentes
-
-
+// Verifica se o diretório de upload existe e cria se não existir
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
 const db = MySql.createConnection({
     'host': 'localhost',
     'user': 'root',
@@ -28,14 +32,12 @@ const db = MySql.createConnection({
     'database': `MovieMaster`
 })
 //cors
-app.use(cors({
-    origin: 'http://localhost:8081', // Substitua pela origem do seu frontend
-    methods: ['GET', 'PUT', 'POST', 'DELETE'], // Métodos permitidos
-    allowedHeaders: ['Content-Type', 'Authorization'] // Cabeçalhos permitidos
-}));
+app.use(cors());
 // Usando o middleware para parsear JSON
 app.use(express.json());
-
+// Aumentando o limite de tamanho do body-parser
+app.use(parser.json({ limit: '5mb' })); // Ajuste o limite conforme necessário
+app.use(parser.urlencoded({ limit: '5mb', extended: true }));
 // Usando o middleware para parsear dados de formulário
 app.use(express.urlencoded({ extended: true }));
 //verificar token
@@ -61,54 +63,72 @@ function VerifyToken(req,res,next){
         req.user = user;
         next();
     })})};
+
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, uploadDir); // Define o diretório onde as imagens serão armazenadas
+        },
+        filename: (req, file, cb) => {
+            cb(null, `${Date.now()}-${file.originalname}`); // Renomeia o arquivo para evitar conflitos
+        }
+    });
 //upload das fotos
- const storage = multer.diskStorage({
-     destination: (req, file, cb) => {
-       cb(null, 'uploads/'); // Pasta onde as imagens serão salvas
-     },
-     filename: (req, file, cb) => {
-       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-       cb(null, uniqueSuffix + path.extname(file.originalname)); // Renomeia o arquivo
-     }
-   });
-  
-  // Inicializa o multer com a configuração de armazenamento
-  const upload = multer({ storage });   
-  
+app.use('/uploads', express.static('uploads'));
+// Inicializa o multer com a configuração de armazenamento
+const upload = multer({ storage: storage, limits: { fileSize: 10 * 4096 * 2048 } }); 
+
   // Rota para upload de imagem
   app.post('/EnvioDaFoto', upload.single('image'), (req, res) => {
-     if (!req.file) {
+    const file = req.file;
+     if (!file) {
        return res.status(400).send('Nenhuma imagem foi enviada.');
      }
-     res.send(`Imagem salva com sucesso: ${req.file.path}`);
+     const imagePath = `/uploads/${file.filename}`;
+     res.send(`Imagem salva com sucesso: ${imagePath}`);
    
   });
 
 //Cadastro dos dados
-app.post('/registerPage/cadastro',(req,res)=>{
-    //coletando nome e senha
-    const {nome,email, senha}= req.body;
-    const caminhoFoto = req.file ? req.file.path : null;
-    //verificando valor destas
-    console.log(`Respectivamente as variaveis: ${nome,email, senha}`);
-    //variavel com comando SLQ para inserir dados na tabela credenciais
-    const InserirDadosSQL = `INSERT INTO ${nomeDaTabela} (nome, email, senha, foto) VALUES (?,?,SHA2(?, 256),?)`;
-    //salvar esses dados em um banco de dados próprio do usuário
-    db.query(InserirDadosSQL,[nome,email,senha, caminhoFoto],(err,resposta)=>{
-        if(err){
-            console.log(`Erro Ao inserir Dados na tabela de cadastro na RegisterPage, segue o erro: ${err}`);
-            return;
-        }else{
-            //gerando o id automático
-            const id = resposta.insertId;
-            //token para validação
-            const token = jwt.sign({ id, nome }, 'secreto', { expiresIn: '30d' });
-            //envio do token mais resposta da API
-            res.json({Mensagem: `Cadastro da RegisterPage Realizado com Sucesso!${resposta}`,nome, token});
-        }
-    })
+app.post('/registerPage/cadastro', (req, res) => {
+    // coletando nome, email, senha e foto
+    const { nome, email, senha, foto } = req.body;
 
+    if (foto) {
+        const fotoBuffer = Buffer.from(foto, 'base64');
+        const fotoPath = `uploads/${nome}_foto.jpg`; // Caminho onde a imagem será salva
+
+        // Salva a imagem no servidor
+        fs.writeFile(fotoPath, fotoBuffer, (err) => {
+            if (err) {
+                console.log('Erro ao salvar imagem:', err);
+                return res.status(500).json({ error: 'Erro ao salvar imagem' });
+            }
+
+            // Caminho completo da imagem
+            console.log(`Respectivamente as variáveis: ${nome}, ${email}, ${senha}`);
+            // variável com comando SQL para inserir dados na tabela credenciais
+            const InserirDadosSQL = `INSERT INTO ${nomeDaTabela} (nome, email, senha, foto) VALUES (?, ?, SHA2(?, 256), ?)`;
+            
+            // salvar esses dados em um banco de dados próprio do usuário
+            db.query(InserirDadosSQL, [nome, email, senha, fotoPath], (err, resposta) => {
+                if (err) {
+                    console.log(`Erro ao inserir dados na tabela de cadastro na RegisterPage, segue o erro: ${err}`);
+                    return res.status(500).json({ error: 'Erro ao inserir dados' });
+                } else {
+                    // gerando o id automático
+                    const id = resposta.insertId;
+                    // token para validação
+                    const token = jwt.sign({ id, nome }, 'secreto', { expiresIn: '30d' });
+                    // envio do token mais resposta da API
+                    res.json({ Mensagem: `Cadastro da RegisterPage realizado com sucesso!`, nome, token });
+                }
+            });
+        });
+    } else {
+        res.status(400).json({ error: 'Foto não fornecida' });
+    }
 });
+
 //login do usuário
 app.post('/loginPage/login',(req,res)=>{
     //coletando email e senha
@@ -425,7 +445,47 @@ app.put('/Amigos/AdicionarAmigo',VerifyToken,(req,res)=>{
         }
     });
 });
+app.get('/Perfil/BuscarFotoDePerfil', VerifyToken, (req, res) => {
+    const id = req.user.id;
 
+    // Consulta ao banco de dados para obter o caminho da foto
+    const query = 'SELECT foto FROM credenciais WHERE id = ?';
+    db.query(query, [id], (err, results) => {
+        if (err) {
+            console.error('Erro ao consultar a tabela de credenciais:', err);
+            return res.status(500).json({ error: 'Erro ao consultar a tabela de credenciais' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        const fotoPath = results[0].foto; // Obtém o caminho da foto
+
+        // Retorna a URL da foto em formato JSON
+        res.json({ foto: fotoPath });
+    });})
+    //buscar foto dos amigos
+    app.get('/Perfil/BuscarFotoDePerfilDosAmigos/:id', VerifyToken, (req, res) => {
+        const id = req.params.id;
+    
+        // Consulta ao banco de dados para obter o caminho da foto
+        const query = 'SELECT foto FROM credenciais WHERE id = ?';
+        db.query(query, [id], (err, results) => {
+            if (err) {
+                console.error('Erro ao consultar a tabela de credenciais:', err);
+                return res.status(500).json({ error: 'Erro ao consultar a tabela de credenciais' });
+            }
+    
+            if (results.length === 0) {
+                return res.status(404).json({ error: 'Usuário não encontrado' });
+            }
+    
+            const fotoPath = results[0].foto; // Obtém o caminho da foto
+    
+            // Retorna a URL da foto em formato JSON
+            res.json({ foto: fotoPath });
+        });})
 //remover amigo
 app.put('/Amigos/RemoverAmigo', VerifyToken, (req, res) => {
     const { id_amigo } = req.body;
@@ -482,6 +542,38 @@ app.get('/Amigos/VerificarAmigos', VerifyToken, (req, res) => {
         }
     });
 });
+//amigos meus
+app.get('/Amigos/VerificarMeusAmigos', VerifyToken, (req, res) => {
+    const id = req.user.id;
+    const sql = `SELECT amigos FROM amigos WHERE credenciais_id = ?`;
+
+    db.query(sql, [id], (err, resultados) => {
+        if (err) {
+            console.log(`Erro ao buscar amigos: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar amigos' });
+        }
+
+        if (resultados.length === 0 || resultados[0].amigos === null) {
+            return res.json({ amigos: [] }); // Retorna uma lista vazia se não houver amigos
+        } else {
+            const amigos = JSON.parse(resultados[0].amigos);
+
+            // Se houver amigos, faz uma nova consulta para obter os nomes
+            const sqlNomes = `SELECT id, nome FROM credenciais WHERE id IN (?)`;
+
+            db.query(sqlNomes, [amigos], (err, resultadoNomes) => {
+                if (err) {
+                    console.log(`Erro ao buscar nomes dos amigos: ${err}`);
+                    return res.status(500).json({ message: 'Erro ao buscar nomes dos amigos' });
+                }
+
+                // Retorna os amigos com seus respectivos nomes
+                return res.json({ amigos: resultadoNomes });
+            });
+        }
+    });
+});
+
 
 
 
