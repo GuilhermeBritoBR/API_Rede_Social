@@ -34,12 +34,12 @@ const db = MySql.createConnection({
 //cors
 app.use(cors());
 // Usando o middleware para parsear JSON
-app.use(express.json());
+
 // Aumentando o limite de tamanho do body-parser
-app.use(parser.json({ limit: '5mb' })); // Ajuste o limite conforme necessário
-app.use(parser.urlencoded({ limit: '5mb', extended: true }));
+app.use(parser.json({ limit: '100mb' })); // Ajuste o limite conforme necessário
+app.use(parser.urlencoded({ limit: '100mb', extended: true }));
 // Usando o middleware para parsear dados de formulário
-app.use(express.urlencoded({ extended: true }));
+
 //verificar token
 function VerifyToken(req,res,next){
     //busca token
@@ -64,29 +64,8 @@ function VerifyToken(req,res,next){
         next();
     })})};
 
-    const storage = multer.diskStorage({
-        destination: (req, file, cb) => {
-            cb(null, uploadDir); // Define o diretório onde as imagens serão armazenadas
-        },
-        filename: (req, file, cb) => {
-            cb(null, `${Date.now()}-${file.originalname}`); // Renomeia o arquivo para evitar conflitos
-        }
-    });
 //upload das fotos
 app.use('/uploads', express.static('uploads'));
-// Inicializa o multer com a configuração de armazenamento
-const upload = multer({ storage: storage, limits: { fileSize: 10 * 4096 * 2048 } }); 
-
-  // Rota para upload de imagem
-  app.post('/EnvioDaFoto', upload.single('image'), (req, res) => {
-    const file = req.file;
-     if (!file) {
-       return res.status(400).send('Nenhuma imagem foi enviada.');
-     }
-     const imagePath = `/uploads/${file.filename}`;
-     res.send(`Imagem salva com sucesso: ${imagePath}`);
-   
-  });
 
 //Cadastro dos dados
 app.post('/registerPage/cadastro', (req, res) => {
@@ -310,7 +289,7 @@ app.put('/Amigos/EditarPublicacao', VerifyToken ,(req,res)=>{
 app.get('/Amigos/ReceberPublicacao', VerifyToken, (req,res)=>{
     const idDoUsuario = req.user.id;
 
-    const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id = ? `;
+    const buscarPublicacaoSQL = `SELECT nome FROM ${posts} WHERE credenciais_id = ? `;
     //AND texto = ? AND filme_id = ? AND data_postagem = ?
     db.query(buscarPublicacaoSQL, [idDoUsuario], (err, resultados) => {
         if (err) {
@@ -325,7 +304,8 @@ app.get('/Amigos/ReceberPublicacao', VerifyToken, (req,res)=>{
             }
             const publicacoesComNome = resultados.map(publicacao => ({
                 ...publicacao,
-                nomeDoUsuario: resultadoNomeDoUsuario[0]?.nome // Adiciona o nome do usuário
+                nomeDoUsuario: resultadoNomeDoUsuario[0]?.nome,
+                foto: resultadoNomeDoUsuario[0].foto // Adiciona o nome do usuário
             }));
 
             res.json(publicacoesComNome);
@@ -333,31 +313,94 @@ app.get('/Amigos/ReceberPublicacao', VerifyToken, (req,res)=>{
         
     });
 });
-app.get('/Amigos/ReceberPublicacaoDosAmigos/:id', VerifyToken, (req,res)=>{
-    const id = req.params.id;
-    const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id = ? `;
-    //AND texto = ? AND filme_id = ? AND data_postagem = ?
-    db.query(buscarPublicacaoSQL, [id], (err, resultados) => {
+app.get('/Amigos/BuscarPostsDosMeusAmigos', VerifyToken, (req, res) => {
+    const id = req.user.id;
+
+    // Primeiro, buscar os amigos
+    const sql = `SELECT credenciais_id FROM amigos WHERE JSON_CONTAINS(amigos, ?)`;
+    db.query(sql, [JSON.stringify(id)], (err, resposta) => {
         if (err) {
-            console.error('Erro ao buscar publicações:', err);
-            return res.status(500).json({ message: 'Erro ao buscar publicações' });
+            console.log(`Erro ao buscar amigos: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar amigos' });
         }
-        const buscarNomeSQL = `SELECT * FROM ${nomeDaTabela} WHERE id = ? `;
-        db.query(buscarNomeSQL,[id],(erroSegundaConsulta, resultadoNomeDoUsuario)=>{
-            if (erroSegundaConsulta) {
-                console.error('Erro ao buscar nome:', erroSegundaConsulta);
+
+        // Extrai os IDs da resposta
+        const ids = resposta.map(row => row.credenciais_id);
+
+        // Se não houver IDs, retorna uma resposta vazia
+        if (ids.length === 0) {
+            return res.json({ message: 'Sem amigos', publicacoes: [] });
+        }
+
+        // Buscar publicações dos amigos
+        const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id IN (?)`;
+        db.query(buscarPublicacaoSQL, [ids], (err, publicacoes) => {
+            if (err) {
+                console.error('Erro ao buscar publicações:', err);
                 return res.status(500).json({ message: 'Erro ao buscar publicações' });
             }
-            const publicacoesComNome = resultados.map(publicacao => ({
-                ...publicacao,
-                nomeDoUsuario: resultadoNomeDoUsuario[0]?.nome // Adiciona o nome do usuário
-            }));
 
-            res.json(publicacoesComNome);
-        })
-        
+            // Criar uma lista de publicações com os nomes dos usuários
+            const publicacoesComNome = [];
+
+            // Para cada publicação, buscar o nome do usuário
+            const buscarNomePromises = publicacoes.map(publicacao => {
+                return new Promise((resolve, reject) => {
+                    const buscarNomeSQL = `SELECT nome FROM ${nomeDaTabela} WHERE id = ?`;
+                    db.query(buscarNomeSQL, [publicacao.credenciais_id], (erroSegundaConsulta, resultadoNomeDoUsuario) => {
+                        if (erroSegundaConsulta) {
+                            return reject(erroSegundaConsulta);
+                        }
+                        const nome = resultadoNomeDoUsuario[0]?.nome || 'Usuário Desconhecido'; // Adiciona nome ou nome padrão
+                        publicacoesComNome.push({ ...publicacao, nomeDoUsuario: nome });
+                        resolve();
+                    });
+                });
+            });
+
+            // Aguardar todas as promessas de nomes serem resolvidas
+            Promise.all(buscarNomePromises)
+                .then(() => {
+                    res.json({ message: 'Publicações encontradas', publicacoes: publicacoesComNome });
+                })
+                .catch((erro) => {
+                    console.error('Erro ao buscar nomes:', erro);
+                    res.status(500).json({ message: 'Erro ao buscar nomes dos usuários' });
+                });
+        });
     });
 });
+
+app.get('/Amigos/BuscarPostsDosMeusAmigos',VerifyToken, (req,res)=>{
+    const id = req.user.id;
+    const sql = `SELECT credenciais_id FROM amigos WHERE JSON_CONTAINS(amigos, ?, '$')`;
+
+    db.query(sql, [(parseInt(id_params) === 0 ? id_user : id_params)], (err, resposta) => {
+        if (err) {
+            console.log(`Erro ao buscar amigos: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar amigos' });
+        }
+
+        // Extrai os IDs da resposta
+        const ids = resposta.map(row => row.credenciais_id);   
+
+        // Se não houver IDs, retorna uma resposta vazia
+        if (ids.length === 0) {
+            return res.json({ message: 'Sem amigos' ,seguidores: [] });
+        }
+
+        const sqlNomes = `SELECT id, nome, foto FROM credenciais WHERE id IN (?)`;
+        db.query(sqlNomes, [ids], (err, resultadoNomes) => {
+            if (err) {
+                console.log(`Erro ao buscar nomes dos amigos: ${err}`);
+                return res.status(500).json({ message: 'Erro ao buscar nomes dos amigos' });
+            }
+
+            // Retorna os amigos com seus respectivos nomes
+            return res.json({message: 'deu certo', seguidores: resultadoNomes });
+        });
+    });
+})
 //deletar post
 app.delete('/Amigos/DeletarPublicacao/:id', VerifyToken, (req,res)=>{
     const id = req.params.id; 
@@ -524,9 +567,9 @@ app.put('/Amigos/RemoverAmigo', VerifyToken, (req, res) => {
     });
 });
 //verificas amigos
-app.get('/Amigos/VerificarAmigos', VerifyToken, (req, res) => {
-    const id = req.user.id;
-    const sql = `SELECT * FROM amigos WHERE credenciais_id = ?`;
+app.get('/Amigos/VerificarAmigos/:id', VerifyToken, (req, res) => {
+    const id = req.params.id;
+    const sql = `SELECT amigos FROM amigos WHERE credenciais_id = ?`;
 
     db.query(sql, [id], (err, resultados) => {
         if (err) {
@@ -535,10 +578,22 @@ app.get('/Amigos/VerificarAmigos', VerifyToken, (req, res) => {
         }
 
         if (resultados.length === 0 || resultados[0].amigos === null) {
-            return res.json({ amigos: [] }); // Retorna uma lista vazia se não houver amigos
+            return res.json({ message: 'Erro ao buscar nomes dos amigos' , amigos: [] }); // Retorna uma lista vazia se não houver amigos
         } else {
             const amigos = JSON.parse(resultados[0].amigos);
-            return res.json({ amigos });
+
+            // Se houver amigos, faz uma nova consulta para obter os nomes
+            const sqlNomes = `SELECT id, nome, foto FROM credenciais WHERE id IN (?)`;
+
+            db.query(sqlNomes, [amigos], (err, resultadoNomes) => {
+                if (err) {
+                    console.log(`Erro ao buscar nomes dos amigos: ${err}`);
+                    return res.status(500).json({ message: 'Erro ao buscar nomes dos amigos' });
+                }
+
+                // Retorna os amigos com seus respectivos nomes
+                return res.json({ amigos: resultadoNomes });
+            });
         }
     });
 });
@@ -554,12 +609,12 @@ app.get('/Amigos/VerificarMeusAmigos', VerifyToken, (req, res) => {
         }
 
         if (resultados.length === 0 || resultados[0].amigos === null) {
-            return res.json({ amigos: [] }); // Retorna uma lista vazia se não houver amigos
+            return res.json({ message: 'Erro ao buscar nomes dos amigos' , amigos: [] }); // Retorna uma lista vazia se não houver amigos
         } else {
             const amigos = JSON.parse(resultados[0].amigos);
 
             // Se houver amigos, faz uma nova consulta para obter os nomes
-            const sqlNomes = `SELECT id, nome FROM credenciais WHERE id IN (?)`;
+            const sqlNomes = `SELECT id, nome, foto FROM credenciais WHERE id IN (?)`;
 
             db.query(sqlNomes, [amigos], (err, resultadoNomes) => {
                 if (err) {
@@ -573,7 +628,54 @@ app.get('/Amigos/VerificarMeusAmigos', VerifyToken, (req, res) => {
         }
     });
 });
+//verificar os meus seguidores
+app.get('/Perfil/BuscarOsQueMeSeguem/:id', VerifyToken, (req, res) => {
+    const id_params = req.params.id;
+    const id_user = req.user.id;
+    const sql = `SELECT credenciais_id FROM amigos WHERE JSON_CONTAINS(amigos, ?, '$')`;
 
+    db.query(sql, [(parseInt(id_params) === 0 ? id_user : id_params)], (err, resposta) => {
+        if (err) {
+            console.log(`Erro ao buscar amigos: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar amigos' });
+        }
+
+        // Extrai os IDs da resposta
+        const ids = resposta.map(row => row.credenciais_id);   
+
+        // Se não houver IDs, retorna uma resposta vazia
+        if (ids.length === 0) {
+            return res.json({ message: 'Sem amigos' ,seguidores: [] });
+        }
+
+        const sqlNomes = `SELECT id, nome, foto FROM credenciais WHERE id IN (?)`;
+        db.query(sqlNomes, [ids], (err, resultadoNomes) => {
+            if (err) {
+                console.log(`Erro ao buscar nomes dos amigos: ${err}`);
+                return res.status(500).json({ message: 'Erro ao buscar nomes dos amigos' });
+            }
+
+            // Retorna os amigos com seus respectivos nomes
+            return res.json({message: 'deu certo', seguidores: resultadoNomes });
+        });
+    });
+});
+//criar lista de filmes
+app.post('/Listas/CriarListaDeFilmes',VerifyToken,(req,res)=>{
+    const id = req.user.id;
+    const {filmesArray,  lista} = req.body;
+    const filmesArrayString = JSON.stringify(filmesArray);
+    const sql = `INSERT INTO listas (lista, credenciais_id, nome_lista) VALUES (?, ?, ?)`;
+    db.query(sql,[filmesArrayString, id, lista],(err,resposta)=>{
+        if(err){
+            console.log(`Erro ao criar tabela: ${err}`);
+            return res.status(500).json({ message: 'Erro ao criar tabela' }); 
+        }
+        return res.json({message: 'deu certo' })
+    })
+
+
+})
 
 
 
