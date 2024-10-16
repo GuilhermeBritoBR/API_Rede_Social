@@ -218,10 +218,11 @@ app.put("/UserPage/AtualizarDadosDoUsuario",VerifyToken, (req,res)=>{
     //requerindo id do usuario
     const idDoUsuario = req.user.id;
     //requerindo os dados do usuario alterados
-    const { nome, email} = req.body;
+    const { nome, email, foto} = req.body;
     //comando SLQ
     const InjetarNovosDados = `UPDATE ${nomeDaTabela} SET nome = ?, email = ? WHERE id = ?`;
     //injetantado os dados
+    
     db.query(InjetarNovosDados,[nome, email, idDoUsuario],(erro, resposta)=>{
         if(erro){
             console.error(`Segue o erro: ${erro} no momento de atualizar os dados`);
@@ -286,33 +287,110 @@ app.put('/Amigos/EditarPublicacao', VerifyToken ,(req,res)=>{
             res.json({ message: 'Publicação atualizada com sucesso!' });
 })
 });
-app.get('/Amigos/ReceberPublicacao', VerifyToken, (req,res)=>{
+app.get('/Amigos/ReceberPublicacao', VerifyToken, (req, res) => {
     const idDoUsuario = req.user.id;
 
-    const buscarPublicacaoSQL = `SELECT nome FROM ${posts} WHERE credenciais_id = ? `;
-    //AND texto = ? AND filme_id = ? AND data_postagem = ?
+    const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id = ?`;
     db.query(buscarPublicacaoSQL, [idDoUsuario], (err, resultados) => {
         if (err) {
             console.error('Erro ao buscar publicações:', err);
             return res.status(500).json({ message: 'Erro ao buscar publicações' });
         }
-        const buscarNomeSQL = `SELECT * FROM ${nomeDaTabela} WHERE id = ? `;
-        db.query(buscarNomeSQL,[idDoUsuario],(erroSegundaConsulta, resultadoNomeDoUsuario)=>{
-            if (erroSegundaConsulta) {
-                console.error('Erro ao buscar nome:', erroSegundaConsulta);
-                return res.status(500).json({ message: 'Erro ao buscar publicações' });
-            }
-            const publicacoesComNome = resultados.map(publicacao => ({
-                ...publicacao,
-                nomeDoUsuario: resultadoNomeDoUsuario[0]?.nome,
-                foto: resultadoNomeDoUsuario[0].foto // Adiciona o nome do usuário
-            }));
 
-            res.json(publicacoesComNome);
-        })
-        
+        // Se não houver resultados, retorna uma resposta vazia
+        if (resultados.length === 0) {
+            return res.json({ message: 'Nenhuma publicação encontrada', publicacoes: [] });
+        }
+
+        // Para cada publicação, buscar o nome e foto do usuário
+        const publicacoesComNomePromises = resultados.map(publicacao => {
+            return new Promise((resolve, reject) => {
+                const buscarNomeSQL = `SELECT nome, foto FROM ${nomeDaTabela} WHERE id = ?`;
+                db.query(buscarNomeSQL, [publicacao.credenciais_id], (erroSegundaConsulta, resultadoNomeDoUsuario) => {
+                    if (erroSegundaConsulta) {
+                        return reject(erroSegundaConsulta);
+                    }
+                    if (resultadoNomeDoUsuario.length > 0) {
+                        resolve({
+                            ...publicacao,
+                            nomeDoUsuario: resultadoNomeDoUsuario[0].nome,
+                            foto: resultadoNomeDoUsuario[0].foto
+                        });
+                    } else {
+                        resolve({
+                            ...publicacao,
+                            nomeDoUsuario: 'Usuário Desconhecido',
+                            foto: null
+                        });
+                    }
+                });
+            });
+        });
+
+        // Aguardar todas as promessas de nome serem resolvidas
+        Promise.all(publicacoesComNomePromises)
+            .then(publicacoesComNome => {
+                res.json({ message: 'Publicações encontradas', publicacoes: publicacoesComNome });
+            })
+            .catch(err => {
+                console.error('Erro ao buscar nomes e fotos:', err);
+                res.status(500).json({ message: 'Erro ao buscar nomes e fotos dos usuários' });
+            });
     });
 });
+app.get('/Amigos/ReceberPublicacoesDosOutrosPerfils/:id', VerifyToken, (req, res) => {
+    const idDoUsuario = req.params.id;  
+
+    const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id = ?`;
+    db.query(buscarPublicacaoSQL, [idDoUsuario], (err, resultados) => {
+        if (err) {
+            console.error('Erro ao buscar publicações:', err);
+            return res.status(500).json({ message: 'Erro ao buscar publicações' });
+        }
+
+        // Se não houver resultados, retorna uma resposta vazia
+        if (resultados.length === 0) {
+            return res.json({ message: 'Nenhuma publicação encontrada', publicacoes: [] });
+        }
+
+        // Para cada publicação, buscar o nome e foto do usuário
+        const publicacoesComNomePromises = resultados.map(publicacao => {
+            return new Promise((resolve, reject) => {
+                const buscarNomeSQL = `SELECT nome, foto FROM ${nomeDaTabela} WHERE id = ?`;
+                db.query(buscarNomeSQL, [publicacao.credenciais_id], (erroSegundaConsulta, resultadoNomeDoUsuario) => {
+                    if (erroSegundaConsulta) {
+                        return reject(erroSegundaConsulta);
+                    }
+                    if (resultadoNomeDoUsuario.length > 0) {
+                        resolve({
+                            ...publicacao,
+                            nomeDoUsuario: resultadoNomeDoUsuario[0].nome,
+                            foto: resultadoNomeDoUsuario[0].foto
+                        });
+                    } else {
+                        resolve({
+                            ...publicacao,
+                            nomeDoUsuario: 'Usuário Desconhecido',
+                            foto: null
+                        });
+                    }
+                });
+            });
+        });
+
+        // Aguardar todas as promessas de nome serem resolvidas
+        Promise.all(publicacoesComNomePromises)
+            .then(publicacoesComNome => {
+                res.json({ message: 'Publicações encontradas', publicacoes: publicacoesComNome });
+            })
+            .catch(err => {
+                console.error('Erro ao buscar nomes e fotos:', err);
+                res.status(500).json({ message: 'Erro ao buscar nomes e fotos dos usuários' });
+            });
+    });
+});
+
+
 app.get('/Amigos/BuscarPostsDosMeusAmigos', VerifyToken, (req, res) => {
     const id = req.user.id;
 
@@ -346,13 +424,14 @@ app.get('/Amigos/BuscarPostsDosMeusAmigos', VerifyToken, (req, res) => {
             // Para cada publicação, buscar o nome do usuário
             const buscarNomePromises = publicacoes.map(publicacao => {
                 return new Promise((resolve, reject) => {
-                    const buscarNomeSQL = `SELECT nome FROM ${nomeDaTabela} WHERE id = ?`;
+                    const buscarNomeSQL = `SELECT nome, foto FROM ${nomeDaTabela} WHERE id = ?`;
                     db.query(buscarNomeSQL, [publicacao.credenciais_id], (erroSegundaConsulta, resultadoNomeDoUsuario) => {
                         if (erroSegundaConsulta) {
                             return reject(erroSegundaConsulta);
                         }
-                        const nome = resultadoNomeDoUsuario[0]?.nome || 'Usuário Desconhecido'; // Adiciona nome ou nome padrão
-                        publicacoesComNome.push({ ...publicacao, nomeDoUsuario: nome });
+                        const nome = resultadoNomeDoUsuario[0]?.nome || 'Usuário Desconhecido';
+                        const foto = resultadoNomeDoUsuario[0]?.foto || 'Usuário Desconhecido'; // Adiciona nome ou nome padrão
+                        publicacoesComNome.push({ ...publicacao, nomeDoUsuario: nome, foto: foto });
                         resolve();
                     });
                 });
@@ -371,36 +450,7 @@ app.get('/Amigos/BuscarPostsDosMeusAmigos', VerifyToken, (req, res) => {
     });
 });
 
-app.get('/Amigos/BuscarPostsDosMeusAmigos',VerifyToken, (req,res)=>{
-    const id = req.user.id;
-    const sql = `SELECT credenciais_id FROM amigos WHERE JSON_CONTAINS(amigos, ?, '$')`;
 
-    db.query(sql, [(parseInt(id_params) === 0 ? id_user : id_params)], (err, resposta) => {
-        if (err) {
-            console.log(`Erro ao buscar amigos: ${err}`);
-            return res.status(500).json({ message: 'Erro ao buscar amigos' });
-        }
-
-        // Extrai os IDs da resposta
-        const ids = resposta.map(row => row.credenciais_id);   
-
-        // Se não houver IDs, retorna uma resposta vazia
-        if (ids.length === 0) {
-            return res.json({ message: 'Sem amigos' ,seguidores: [] });
-        }
-
-        const sqlNomes = `SELECT id, nome, foto FROM credenciais WHERE id IN (?)`;
-        db.query(sqlNomes, [ids], (err, resultadoNomes) => {
-            if (err) {
-                console.log(`Erro ao buscar nomes dos amigos: ${err}`);
-                return res.status(500).json({ message: 'Erro ao buscar nomes dos amigos' });
-            }
-
-            // Retorna os amigos com seus respectivos nomes
-            return res.json({message: 'deu certo', seguidores: resultadoNomes });
-        });
-    });
-})
 //deletar post
 app.delete('/Amigos/DeletarPublicacao/:id', VerifyToken, (req,res)=>{
     const id = req.params.id; 
@@ -675,7 +725,69 @@ app.post('/Listas/CriarListaDeFilmes',VerifyToken,(req,res)=>{
     })
 
 
+});
+//dar like
+app.post('/Amigos/CurtirReviewDosAmigos',VerifyToken,(req,res)=>{
+    const id = req.user.id;
+    const {idDoPost} = req.body;
+    console.log(`User ID: ${req.user.id}`);
+    console.log(`Id do post: ${idDoPost}`);
+    const SQL = `INSERT INTO curtidas (credenciais_id, postagens_id) VALUES (?, ?)`;
+    db.query(SQL,[id, idDoPost],(err,resposta)=>{
+        if (err) {
+            console.log(`Erro ao curtir post: ${err}`);
+            return res.status(500).json({ message: 'Erro ao curtir post' });
+        }
+        return res.json({ message: 'Post curtido' });
+    })
 })
+app.get('/Amigos/VerificarCurtirDoPost/:id', VerifyToken, (req, res) => {
+    const idUsuario = req.user.id; 
+    const  idDoPost  = req.params.id; 
+
+    const SQL = `SELECT * FROM curtidas WHERE credenciais_id = ? AND postagens_id = ?`;
+    db.query(SQL, [idUsuario, idDoPost], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao verificar curtida: ${err}`);
+            return res.status(500).json({ message: 'Erro ao verificar curtida' });
+        }
+        if (resultado.length > 0) {
+            // O usuário curtiu o post
+            return res.json({ curtiu: true });
+        } else {
+            // O usuário não curtiu o post  
+            return res.json({ curtiu: false });
+        }
+    });
+});
+
+app.get('/Amigos/QuantidadeDeCurtidasPorPost/:id', VerifyToken, (req, res) => {
+    const idDoPost  = req.params.id;
+
+    const SQL = `SELECT COUNT(*) AS totalCurtidas FROM curtidas WHERE postagens_id = ?`;
+    db.query(SQL, [idDoPost], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao contar curtidas: ${err}`);
+            return res.status(500).json({ message: 'Erro ao contar curtidas' });
+        }
+        return res.json({ totalCurtidas: resultado[0].totalCurtidas });
+    });
+});
+//remover like
+app.post('/Amigos/DescurtirReviewDosAmigos', VerifyToken, (req, res) => {
+    const { idDoPost } = req.body;
+    const userId = req.user.id; // Supomos que o middleware VerifyToken adiciona o id do usuário
+
+    const SQL = `DELETE FROM curtidas WHERE postagens_id = ? AND credenciais_id = ?`;
+    
+    db.query(SQL, [idDoPost, userId], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao descurtir post: ${err}`);
+            return res.status(500).json({ message: 'Erro ao descurtir post' });
+        }
+        return res.json({ message: 'Post descurtido com sucesso' });
+    });
+});
 
 
 
