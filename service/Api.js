@@ -452,20 +452,29 @@ app.get('/Amigos/BuscarPostsDosMeusAmigos', VerifyToken, (req, res) => {
 
 
 //deletar post
-app.delete('/Amigos/DeletarPublicacao/:id', VerifyToken, (req,res)=>{
-    const id = req.params.id; 
-    const DeletarPostSQL = `DELETE FROM ${posts} WHERE id = ?`;
-    db.query(DeletarPostSQL,[id],(err)=>{
+app.delete('/Amigos/DeletarPublicacao/:id', VerifyToken, (req, res) => {
+    const id = req.params.id;
+
+    // Primeiro, deletar as curtidas associadas à publicação
+    const DeletarCurtidasSQL = `DELETE FROM curtidas WHERE postagens_id = ?`;
+    db.query(DeletarCurtidasSQL, [parseInt(id)], (err) => {
         if (err) {
-            console.log(`Segue o erro: ${err}`);
-            return res.status(500).json({ message: 'Erro ao excluir a publicação' });
+            console.log(`Erro ao deletar curtidas: ${err}`);
+            return res.status(500).json({ message: 'Erro ao deletar curtidas associadas' });
         }
-        
-        return res.json({ message: 'Publicação excluída com sucesso!' });
-    })
 
+        // Depois, deletar a publicação
+        const DeletarPostSQL = `DELETE FROM postagens WHERE id = ?`;
+        db.query(DeletarPostSQL, [parseInt(id)], (err) => {
+            if (err) {
+                console.log(`Erro ao excluir a publicação: ${err}`);
+                return res.status(500).json({ message: 'Erro ao excluir a publicação' });
+            }
+            return res.json({ message: 'Publicação excluída com sucesso!' });
+        });
+    });
+});
 
-})
 //rodar api
 
 //funções de pesquisa
@@ -713,10 +722,10 @@ app.get('/Perfil/BuscarOsQueMeSeguem/:id', VerifyToken, (req, res) => {
 //criar lista de filmes
 app.post('/Listas/CriarListaDeFilmes',VerifyToken,(req,res)=>{
     const id = req.user.id;
-    const {filmesArray,  lista} = req.body;
+    const {filmesArray,  lista, descricao} = req.body;
     const filmesArrayString = JSON.stringify(filmesArray);
-    const sql = `INSERT INTO listas (lista, credenciais_id, nome_lista) VALUES (?, ?, ?)`;
-    db.query(sql,[filmesArrayString, id, lista],(err,resposta)=>{
+    const sql = `INSERT INTO listas (lista, credenciais_id, nome_lista, descricao) VALUES (?, ?, ?, ?)`;
+    db.query(sql,[filmesArrayString, id, lista, descricao],(err,resposta)=>{
         if(err){
             console.log(`Erro ao criar tabela: ${err}`);
             return res.status(500).json({ message: 'Erro ao criar tabela' }); 
@@ -788,9 +797,128 @@ app.post('/Amigos/DescurtirReviewDosAmigos', VerifyToken, (req, res) => {
         return res.json({ message: 'Post descurtido com sucesso' });
     });
 });
+//alterar imagem
+app.put('/Configuracoes/AlterarImagem', VerifyToken, (req, res) => {
+    // Obtém o id do usuário e a nova foto do corpo da requisição
+    const id = req.user.id;
+    const {foto } = req.body;
+
+    if (!id || !foto) {
+        return res.status(400).json({ error: 'ID ou foto não fornecidos' });
+    }
+
+    // Busca o nome do usuário pelo ID para gerar o caminho correto da foto
+    const buscarNomeSQL = 'SELECT nome FROM credenciais WHERE id = ?';
+
+    db.query(buscarNomeSQL, [id], (err, resultados) => {
+        if (err) {
+            console.log('Erro ao buscar nome:', err);
+            return res.status(500).json({ error: 'Erro ao buscar nome do usuário' });
+        }
+
+        if (resultados.length === 0) {
+            return res.status(404).json({ error: 'Usuário não encontrado' });
+        }
+
+        const nome = resultados[0].nome;
+        const fotoBuffer = Buffer.from(foto, 'base64');
+        const fotoPath = `uploads/${nome}_foto.jpg`; // Atualiza o caminho da imagem
+
+        // Sobrescreve a imagem existente no servidor
+        fs.writeFile(fotoPath, fotoBuffer, (err) => {
+            if (err) {
+                console.log('Erro ao salvar imagem:', err);
+                return res.status(500).json({ error: 'Erro ao salvar imagem' });
+            }
+
+            // Atualiza o caminho da imagem no banco de dados
+            const atualizarFotoSQL = 'UPDATE credenciais SET foto = ? WHERE id = ?';
+
+            db.query(atualizarFotoSQL, [fotoPath, id], (err) => {
+                if (err) {
+                    console.log('Erro ao atualizar imagem:', err);
+                    return res.status(500).json({ error: 'Erro ao atualizar imagem no banco de dados' });
+                }
+
+                res.json({ mensagem: 'Imagem alterada com sucesso!' });
+            });
+        });
+    });
+});
+
+//buscar lista que tenho
+app.get('/Lista/BuscarMinhasListas', VerifyToken, (req, res) => {
+    const id = req.user.id; 
+    const sql = `SELECT * FROM listas WHERE credenciais_id = ?`; 
+
+    db.query(sql, [id], (err, resultados) => {
+        if (err) {
+            console.log(`Erro ao buscar listas: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar listas' });
+        }
+        return res.json(resultados); 
+    });
+});
+
+//adicionar
+app.put('/Lista/AdicionarFilmeALista', VerifyToken, (req, res) => {
+    
+    const {idDaLista,idDoFilme, capaURL, titulo} = req.body
+    
+    // Primeiro, buscamos a lista correspondente ao idDaLista
+    const buscarListaSQL = `SELECT lista FROM listas WHERE id = ? AND credenciais_id = ?`;
+    const credenciaisId = req.user.id;
+
+    db.query(buscarListaSQL, [idDaLista, credenciaisId], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao buscar a lista: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar a lista' });
+        }       
+        if (resultado.length === 0) {
+            return res.status(404).json({ message: 'Lista não encontrada' });
+        }
+
+        let filmesArray = JSON.parse(resultado[0].lista || '[]');
+
+        // Verificar se o filme já está na lista pelo idDoFilme
+        const filmeExiste = filmesArray.find(filme => filme.id === idDoFilme);
+        if (filmeExiste) {
+            return res.status(400).json({ message: 'Filme já está na lista' });
+        }
+
+        // Adicionar o novo filme como um objeto à lista
+        const novoFilme = {
+            id: idDoFilme,
+            titulo: titulo,
+            capaURL: capaURL
+        };
+        filmesArray.push(novoFilme);
+
+        const atualizarListaSQL = `UPDATE listas SET lista = ? WHERE id = ? AND credenciais_id = ?`;
+        db.query(atualizarListaSQL, [JSON.stringify(filmesArray), idDaLista, credenciaisId], (err, resposta) => {
+            if (err) {
+                console.log(`Erro ao adicionar filme à lista: ${err}`);
+                return res.status(500).json({ message: 'Erro ao adicionar filme à lista' });
+            }
+            return res.json({ message: 'Filme adicionado com sucesso!' });
+        });
+    });
+});
+//buscar reviews
+app.get('/Filme/BuscarReviewsDosFilmes/:id', VerifyToken, (req, res) => {
+    const id = req.params.id;
+
+    const buscarFilmesSQL = `SELECT * FROM postagens WHERE filme_id = ?`;
+    db.query(buscarFilmesSQL, [parseInt(id)], (err, resultados) => {
+        if (err) {
+            console.error('Erro ao buscar filmes:', err);
+            return res.status(500).json({ message: 'Erro ao buscar filmes' });
+        }
 
 
-
+        res.json({ postagens: resultados });
+    });
+});
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
   });
