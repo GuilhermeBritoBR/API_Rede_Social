@@ -395,16 +395,16 @@ app.get('/Amigos/BuscarPostsDosMeusAmigos', VerifyToken, (req, res) => {
     const id = req.user.id;
 
     // Primeiro, buscar os amigos
-    const sql = `SELECT credenciais_id FROM amigos WHERE JSON_CONTAINS(amigos, ?)`;
-    db.query(sql, [JSON.stringify(id)], (err, resposta) => {
+    const sql = `SELECT amigos FROM amigos WHERE credenciais_id = ?`;
+    db.query(sql, [id], (err, resposta) => {
         if (err) {
             console.log(`Erro ao buscar amigos: ${err}`);
             return res.status(500).json({ message: 'Erro ao buscar amigos' });
         }
 
         // Extrai os IDs da resposta
-        const ids = resposta.map(row => row.credenciais_id);
 
+        const ids = JSON.parse(resposta[0]?.amigos || '[]');
         // Se não houver IDs, retorna uma resposta vazia
         if (ids.length === 0) {
             return res.json({ message: 'Sem amigos', publicacoes: [] });
@@ -416,7 +416,7 @@ app.get('/Amigos/BuscarPostsDosMeusAmigos', VerifyToken, (req, res) => {
             if (err) {
                 console.error('Erro ao buscar publicações:', err);
                 return res.status(500).json({ message: 'Erro ao buscar publicações' });
-            }
+            }   
 
             // Criar uma lista de publicações com os nomes dos usuários
             const publicacoesComNome = [];
@@ -515,6 +515,7 @@ app.get('/PesquisarNomesDeUsuarios', VerifyToken, (req,res)=>{
 app.put('/Amigos/AdicionarAmigo',VerifyToken,(req,res)=>{
     const {id_amigo} = req.body;
     const id = req.user.id;
+    console.log(`id do amigo: ${id_amigo}`);
     const checkSql = `SELECT amigos FROM amigos WHERE credenciais_id = ?`;
     db.query(checkSql, [id], (err, resultados) => {
         if (err) {
