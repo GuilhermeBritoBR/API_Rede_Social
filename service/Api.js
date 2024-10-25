@@ -908,17 +908,25 @@ app.put('/Lista/AdicionarFilmeALista', VerifyToken, (req, res) => {
 app.get('/Filme/BuscarReviewsDosFilmes/:id', VerifyToken, (req, res) => {
     const id = req.params.id;
 
-    const buscarFilmesSQL = `SELECT * FROM postagens WHERE filme_id = ?`;
+    // Consulta SQL para buscar postagens e associar credenciais (incluindo a foto)
+    const buscarFilmesSQL = `
+        SELECT postagens.*, credenciais.foto , credenciais.nome
+        FROM postagens 
+        JOIN credenciais ON postagens.credenciais_id = credenciais.id 
+        WHERE postagens.filme_id = ?
+    `;
+    
     db.query(buscarFilmesSQL, [parseInt(id)], (err, resultados) => {
         if (err) {
             console.error('Erro ao buscar filmes:', err);
             return res.status(500).json({ message: 'Erro ao buscar filmes' });
         }
 
-
+        // Retorna as postagens junto com as fotos do perfil do usuário
         res.json({ postagens: resultados });
     });
 });
+
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
   });
