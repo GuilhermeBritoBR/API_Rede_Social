@@ -69,44 +69,43 @@ app.use('/uploads', express.static('uploads'));
 
 //Cadastro dos dados
 app.post('/registerPage/cadastro', (req, res) => {
-    // coletando nome, email, senha e foto
     const { nome, email, senha, foto } = req.body;
+
+    
+    const fotoPath = foto ? `uploads/${nome}_foto.jpg` : 'uploads/1f2334rfgflamengobrasil2024senaiservicosocial.jpg';
 
     if (foto) {
         const fotoBuffer = Buffer.from(foto, 'base64');
-        const fotoPath = `uploads/${nome}_foto.jpg`; // Caminho onde a imagem será salva
-
-        // Salva a imagem no servidor
+        
         fs.writeFile(fotoPath, fotoBuffer, (err) => {
             if (err) {
                 console.log('Erro ao salvar imagem:', err);
                 return res.status(500).json({ error: 'Erro ao salvar imagem' });
             }
-
-            // Caminho completo da imagem
-            console.log(`Respectivamente as variáveis: ${nome}, ${email}, ${senha}`);
-            // variável com comando SQL para inserir dados na tabela credenciais
-            const InserirDadosSQL = `INSERT INTO ${nomeDaTabela} (nome, email, senha, foto) VALUES (?, ?, SHA2(?, 256), ?)`;
-            
-            // salvar esses dados em um banco de dados próprio do usuário
-            db.query(InserirDadosSQL, [nome, email, senha, fotoPath], (err, resposta) => {
-                if (err) {
-                    console.log(`Erro ao inserir dados na tabela de cadastro na RegisterPage, segue o erro: ${err}`);
-                    return res.status(500).json({ error: 'Erro ao inserir dados' });
-                } else {
-                    // gerando o id automático
-                    const id = resposta.insertId;
-                    // token para validação
-                    const token = jwt.sign({ id, nome }, 'secreto', { expiresIn: '30d' });
-                    // envio do token mais resposta da API
-                    res.json({ Mensagem: `Cadastro da RegisterPage realizado com sucesso!`, nome, token });
-                }
-            });
+            inserirDadosNoBanco(nome, email, senha, fotoPath, res);
         });
     } else {
-        res.status(400).json({ error: 'Foto não fornecida' });
+ 
+        inserirDadosNoBanco(nome, email, senha, fotoPath, res);
     }
 });
+
+// Função para inserir dados no banco de dados
+function inserirDadosNoBanco(nome, email, senha, fotoPath, res) {
+    const inserirDadosSQL = `INSERT INTO ${nomeDaTabela} (nome, email, senha, foto) VALUES (?, ?, SHA2(?, 256), ?)`;
+    
+    db.query(inserirDadosSQL, [nome, email, senha, fotoPath], (err, resposta) => {
+        if (err) {
+            console.log(`Erro ao inserir dados na tabela de cadastro na RegisterPage, segue o erro: ${err}`);
+            return res.status(500).json({ error: 'Erro ao inserir dados' });
+        } else {
+            const id = resposta.insertId;
+            const token = jwt.sign({ id, nome }, 'secreto', { expiresIn: '30d' });
+            res.json({ Mensagem: `Cadastro da RegisterPage realizado com sucesso!`, nome, token });
+        }
+    });
+}
+
 
 //login do usuário
 app.post('/loginPage/login',(req,res)=>{
@@ -411,7 +410,7 @@ app.get('/Amigos/BuscarPostsDosMeusAmigos', VerifyToken, (req, res) => {
         }
 
         // Buscar publicações dos amigos
-        const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id IN (?)`;
+        const buscarPublicacaoSQL = `SELECT * FROM ${posts} WHERE credenciais_id IN (?) ORDER BY data_postagem DESC`;
         db.query(buscarPublicacaoSQL, [ids], (err, publicacoes) => {
             if (err) {
                 console.error('Erro ao buscar publicações:', err);
