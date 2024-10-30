@@ -927,6 +927,115 @@ app.get('/Filme/BuscarReviewsDosFilmes/:id', VerifyToken, (req, res) => {
     });
 });
 
+app.put('/Lista/RenomearLista', VerifyToken, (req, res) => {
+    const { idDaLista, nome_lista } = req.body;
+    const credenciaisId = req.user.id;
+
+    const atualizarNomeSQL = `UPDATE listas SET nome_lista = ? WHERE id = ? AND credenciais_id = ?`;
+
+    db.query(atualizarNomeSQL, [nome_lista, idDaLista, credenciaisId], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao renomear a lista: ${err}`);
+            return res.status(500).json({ message: 'Erro ao renomear a lista' });
+        }
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ message: 'Lista não encontrada' });
+        }
+        return res.json({ message: 'Nome da lista atualizado com sucesso!' });
+    });
+});
+
+app.put('/Lista/RemoverFilmeDaLista', VerifyToken, (req, res) => {
+    const { idDaLista, idDoFilme } = req.body;
+    const credenciaisId = req.user.id;
+
+    const buscarListaSQL = `SELECT lista FROM listas WHERE id = ? AND credenciais_id = ?`;
+
+    db.query(buscarListaSQL, [idDaLista, credenciaisId], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao buscar a lista: ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar a lista' });
+        }
+        if (resultado.length === 0) {
+            return res.status(404).json({ message: 'Lista não encontrada' });
+        }
+
+        let filmesArray = JSON.parse(resultado[0].lista || '[]');
+        filmesArray = filmesArray.filter(filme => filme.id !== idDoFilme);
+
+        const atualizarListaSQL = `UPDATE listas SET lista = ? WHERE id = ? AND credenciais_id = ?`;
+        db.query(atualizarListaSQL, [JSON.stringify(filmesArray), idDaLista, credenciaisId], (err, resposta) => {
+            if (err) {
+                console.log(`Erro ao remover filme da lista: ${err}`);
+                return res.status(500).json({ message: 'Erro ao remover filme da lista' });
+            }
+            return res.json({ message: 'Filme removido com sucesso!' });
+        });
+    });
+});
+app.delete('/Lista/DeletarLista/:idDaLista', VerifyToken, (req, res) => {
+    const idDaLista = req.params.idDaLista;
+    const credenciaisId = req.user.id;
+
+    const deletarListaSQL = `DELETE FROM listas WHERE id = ? AND credenciais_id = ?`;
+
+    db.query(deletarListaSQL, [idDaLista, credenciaisId], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao deletar a lista: ${err}`);
+            return res.status(500).json({ message: 'Erro ao deletar a lista' });
+        }
+        if (resultado.affectedRows === 0) {
+            return res.status(404).json({ message: 'Lista não encontrada' });
+        }
+        return res.json({ message: 'Lista deletada com sucesso!' });
+    });
+});
+
+app.put('/Filme/Favoritar', VerifyToken, (req, res) => {
+    const credenciais_id = req.user.id; // ID do usuário autenticado
+    const { filme_id } = req.body; // ID do filme a ser favoritado
+
+    const sql = `UPDATE postagens SET favorito = 1 WHERE filme_id = ? AND credenciais_id = ?`;
+
+    db.query(sql, [filme_id, credenciais_id], (err, resposta) => {
+        if (err) {
+            console.log(`Erro ao favoritar filme: ${err}`);
+            return res.status(500).json({ message: 'Erro ao favoritar filme' });
+        }
+        return res.json({ message: 'Filme favoritado com sucesso!' });
+    });
+});
+
+app.put('/Filme/RemoverFavorito', VerifyToken, (req, res) => {
+    const credenciais_id = req.user.id; // ID do usuário autenticado
+    const { filme_id } = req.body; // ID do filme a ser desfavoritado
+
+    const sql = `UPDATE postagens SET favorito = 0 WHERE filme_id = ? AND credenciais_id = ?`;
+
+    db.query(sql, [filme_id, credenciais_id], (err, resposta) => {
+        if (err) {
+            console.log(`Erro ao remover favorito do filme: ${err}`);
+            return res.status(500).json({ message: 'Erro ao remover favorito do filme' });
+        }
+        return res.json({ message: 'Favorito removido com sucesso!' });
+    });
+});
+
+app.put('/Filme/AtualizarNota', VerifyToken, (req, res) => {
+    const credenciais_id = req.user.id; // ID do usuário autenticado
+    const { idDoFilme, nota } = req.body; // ID do filme e a nova nota
+
+    const sql = `UPDATE postagens SET nota = ? WHERE filme_id = ? AND credenciais_id = ?`;
+
+    db.query(sql, [nota, idDoFilme, credenciais_id], (err, resposta) => {
+        if (err) {
+            console.log(`Erro ao atualizar a nota: ${err}`);
+            return res.status(500).json({ message: 'Erro ao atualizar a nota' });
+        }
+        return res.json({ message: 'Nota atualizada com sucesso!' });
+    });
+});
+
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
   });
