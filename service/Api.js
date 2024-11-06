@@ -486,7 +486,7 @@ app.get('/PesquisarNomesDeUsuarios', VerifyToken, (req,res)=>{
 });
   app.get('/Perfil/BuscarMeusFilmesFavoritos', VerifyToken, (req,res)=>{
     const id = req.user.id;
-    const comandoParaBuscar = `SELECT * FROM postagens WHERE favorito = 1 AND credenciais_id = ?`;
+    const comandoParaBuscar = `SELECT * FROM interacoes WHERE favorito = 1 AND credenciais_id = ?`;
     db.query(comandoParaBuscar,[id],(err,resposta)=>{
         if(err){
             console.log(`Segue o erro: ${err}`);
@@ -499,7 +499,7 @@ app.get('/PesquisarNomesDeUsuarios', VerifyToken, (req,res)=>{
   });
   app.get('/Pesquisa/BuscarFilmesFavoritosDosAmigos/:id', VerifyToken, (req,res)=>{
     const id = req.params.id;
-    const comandoParaBuscar = `SELECT * FROM postagens WHERE favorito = 1 AND credenciais_id = ?`;
+    const comandoParaBuscar = `SELECT * FROM interacoes WHERE favorito = 1 AND credenciais_id = ?`;
     db.query(comandoParaBuscar,[id],(err,resposta)=>{
         if(err){
             console.log(`Segue o erro: ${err}`);
@@ -994,17 +994,17 @@ app.delete('/Lista/DeletarLista/:idDaLista', VerifyToken, (req, res) => {
 // Rota para favoritar um filme
 app.put('/Filme/Favoritar', VerifyToken, (req, res) => {
     const credenciais_id = req.user.id; // ID do usuário autenticado
-    const { filme_id } = req.body; // ID do filme a ser favoritado
+    const { filme_id, capa, titulo } = req.body; // ID do filme a ser favoritado
     console.log(filme_id);
 
     // Usando o comando INSERT ... ON DUPLICATE KEY UPDATE
     const sql = `
-    INSERT INTO interacoes (filme_id, credenciais_id, favorito)
-    VALUES (?, ?, 1)
+    INSERT INTO interacoes (filme_id, credenciais_id, favorito, capa, titulo)
+    VALUES (?, ?, 1, ?, ?)
     ON DUPLICATE KEY UPDATE favorito = 1;
     `;
 
-    db.query(sql, [filme_id, credenciais_id], (err, resposta) => {
+    db.query(sql, [filme_id, credenciais_id, capa, titulo], (err, resposta) => {
         if (err) {
             console.log(`Erro ao favoritar filme: ${err}`);
             return res.status(500).json({ message: 'Erro ao favoritar filme' });
@@ -1037,16 +1037,16 @@ app.put('/Filme/RemoverFavorito', VerifyToken, (req, res) => {
 // Rota para atualizar a nota de um filme
 app.put('/Filme/AtualizarNota', VerifyToken, (req, res) => {
     const credenciais_id = req.user.id; // ID do usuário autenticado
-    const { idDoFilme, nota } = req.body; // ID do filme e a nova nota
+    const { idDoFilme, nota, capa, titulo } = req.body; // ID do filme e a nova nota
 
     // Usando o comando INSERT ... ON DUPLICATE KEY UPDATE para atualizar as estrelas
     const sql = `
-    INSERT INTO interacoes (filme_id, credenciais_id, estrelas)
-    VALUES (?, ?, ?)
+    INSERT INTO interacoes (filme_id, credenciais_id, estrelas, capa, titulo)
+    VALUES (?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE estrelas = VALUES(estrelas);
     `;
 
-    db.query(sql, [idDoFilme, credenciais_id, nota], (err, resposta) => {
+    db.query(sql, [idDoFilme, credenciais_id, nota, capa, titulo], (err, resposta) => {
         if (err) {
             console.log(`Erro ao atualizar a nota: ${err}`);
             return res.status(500).json({ message: 'Erro ao atualizar a nota' });
