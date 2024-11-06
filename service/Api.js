@@ -991,11 +991,18 @@ app.delete('/Lista/DeletarLista/:idDaLista', VerifyToken, (req, res) => {
     });
 });
 
+// Rota para favoritar um filme
 app.put('/Filme/Favoritar', VerifyToken, (req, res) => {
     const credenciais_id = req.user.id; // ID do usuário autenticado
     const { filme_id } = req.body; // ID do filme a ser favoritado
+    console.log(filme_id);
 
-    const sql = `UPDATE postagens SET favorito = 1 WHERE filme_id = ? AND credenciais_id = ?`;
+    // Usando o comando INSERT ... ON DUPLICATE KEY UPDATE
+    const sql = `
+    INSERT INTO interacoes (filme_id, credenciais_id, favorito)
+    VALUES (?, ?, 1)
+    ON DUPLICATE KEY UPDATE favorito = 1;
+    `;
 
     db.query(sql, [filme_id, credenciais_id], (err, resposta) => {
         if (err) {
@@ -1006,11 +1013,17 @@ app.put('/Filme/Favoritar', VerifyToken, (req, res) => {
     });
 });
 
+// Rota para remover o filme do favorito
 app.put('/Filme/RemoverFavorito', VerifyToken, (req, res) => {
     const credenciais_id = req.user.id; // ID do usuário autenticado
     const { filme_id } = req.body; // ID do filme a ser desfavoritado
 
-    const sql = `UPDATE postagens SET favorito = 0 WHERE filme_id = ? AND credenciais_id = ?`;
+    // Usando o comando INSERT ... ON DUPLICATE KEY UPDATE
+    const sql = `
+    INSERT INTO interacoes (filme_id, credenciais_id, favorito)
+    VALUES (?, ?, 0)
+    ON DUPLICATE KEY UPDATE favorito = 0;
+    `;
 
     db.query(sql, [filme_id, credenciais_id], (err, resposta) => {
         if (err) {
@@ -1021,13 +1034,19 @@ app.put('/Filme/RemoverFavorito', VerifyToken, (req, res) => {
     });
 });
 
+// Rota para atualizar a nota de um filme
 app.put('/Filme/AtualizarNota', VerifyToken, (req, res) => {
     const credenciais_id = req.user.id; // ID do usuário autenticado
     const { idDoFilme, nota } = req.body; // ID do filme e a nova nota
 
-    const sql = `UPDATE postagens SET nota = ? WHERE filme_id = ? AND credenciais_id = ?`;
+    // Usando o comando INSERT ... ON DUPLICATE KEY UPDATE para atualizar as estrelas
+    const sql = `
+    INSERT INTO interacoes (filme_id, credenciais_id, estrelas)
+    VALUES (?, ?, ?)
+    ON DUPLICATE KEY UPDATE estrelas = VALUES(estrelas);
+    `;
 
-    db.query(sql, [nota, idDoFilme, credenciais_id], (err, resposta) => {
+    db.query(sql, [idDoFilme, credenciais_id, nota], (err, resposta) => {
         if (err) {
             console.log(`Erro ao atualizar a nota: ${err}`);
             return res.status(500).json({ message: 'Erro ao atualizar a nota' });
@@ -1035,6 +1054,36 @@ app.put('/Filme/AtualizarNota', VerifyToken, (req, res) => {
         return res.json({ message: 'Nota atualizada com sucesso!' });
     });
 });
+
+// Rota para verificar se o filme está favoritado e a quantidade de estrelas
+app.get('/Filme/VerificarDados/:id', VerifyToken, (req, res) => {
+    const credenciais_id = req.user.id; // ID do usuário autenticado
+     // ID do filme a ser verificado
+    const filme_id = req.params.id;
+    // Query para verificar o status de 'favorito' e a quantidade de 'estrelas'
+    const sql = `
+        SELECT favorito, estrelas
+        FROM interacoes
+        WHERE filme_id = ? AND credenciais_id = ?
+    `;
+
+    db.query(sql, [filme_id, credenciais_id], (err, results) => {
+        if (err) {
+            console.log(`Erro ao verificar os dados: ${err}`);
+            return res.status(500).json({ message: 'Erro ao verificar dados' });
+        }
+
+        if (results.length === 0) {
+            // Se não encontrar nenhum registro, significa que o usuário não interagiu com o filme
+            return res.json({ favorito: null, estrelas: null });
+        }
+
+        // Se o registro for encontrado, retorna o status de 'favorito' e 'estrelas'
+        const { favorito, estrelas } = results[0];
+        return res.json({ favorito, estrelas });
+    });
+});
+
 
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
