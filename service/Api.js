@@ -1058,9 +1058,9 @@ app.put('/Filme/AtualizarNota', VerifyToken, (req, res) => {
 // Rota para verificar se o filme está favoritado e a quantidade de estrelas
 app.get('/Filme/VerificarDados/:id', VerifyToken, (req, res) => {
     const credenciais_id = req.user.id; // ID do usuário autenticado
-     // ID do filme a ser verificado
-    const filme_id = req.params.id;
-    // Query para verificar o status de 'favorito' e a quantidade de 'estrelas'
+    const filme_id = req.params.id; // ID do filme a ser verificado
+    
+    // Query para verificar o status de 'favorito', 'estrelas' e se está na lista "Assistir Mais Tarde"
     const sql = `
         SELECT favorito, estrelas
         FROM interacoes
@@ -1073,17 +1073,140 @@ app.get('/Filme/VerificarDados/:id', VerifyToken, (req, res) => {
             return res.status(500).json({ message: 'Erro ao verificar dados' });
         }
 
-        if (results.length === 0) {
-            // Se não encontrar nenhum registro, significa que o usuário não interagiu com o filme
-            return res.json({ favorito: null, estrelas: null });
-        }
+        // Verificando se o filme está na lista "Assistir Mais Tarde"
+        const verificarListaSQL = `
+            SELECT lista
+            FROM listas
+            WHERE credenciais_id = ? AND nome_lista = 'Assistir Mais Tarde'
+        `;
 
-        // Se o registro for encontrado, retorna o status de 'favorito' e 'estrelas'
-        const { favorito, estrelas } = results[0];
-        return res.json({ favorito, estrelas });
+        db.query(verificarListaSQL, [credenciais_id], (err, listaResult) => {
+            if (err) {
+                console.log(`Erro ao verificar lista 'Assistir Mais Tarde': ${err}`);
+                return res.status(500).json({ message: 'Erro ao verificar lista' });
+            }
+
+            let filmeNaLista = false;
+
+            if (listaResult.length > 0) {
+                // Se a lista existir, buscamos se o filme está na lista
+                const filmesArray = JSON.parse(listaResult[0].lista || '[]');
+                console.log(filmesArray);
+                filmeNaLista = filmesArray.some(filme => filme.id === parseInt(filme_id)); // Verifica se o filme está na lista
+                console.log(filmeNaLista);
+            }
+
+            // Se não encontrar nenhum registro em interações, significa que o usuário não interagiu com o filme
+            if (results.length === 0) {
+                return res.json({ favorito: null, estrelas: null, filmeNaLista });
+            }
+
+            // Se o registro for encontrado, retorna o status de 'favorito', 'estrelas' e 'filmeNaLista'
+            const { favorito, estrelas } = results[0];
+            return res.json({ favorito, estrelas, filmeNaLista });
+        });
     });
 });
 
+
+app.put('/Lista/AdicionarFilmeMaisTarde', VerifyToken, (req, res) => {
+    const { idDoFilme, capaURL, titulo } = req.body;
+    const credenciaisId = req.user.id;
+
+    // Verificar se já existe uma lista chamada "Assistir Mais Tarde" para o usuário
+    const buscarListaMaisTardeSQL = `SELECT id, lista FROM listas WHERE credenciais_id = ? AND nome_lista = 'Assistir Mais Tarde'`;
+
+    db.query(buscarListaMaisTardeSQL, [credenciaisId], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao buscar a lista "Assistir Mais Tarde": ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar a lista "Assistir Mais Tarde"' });
+        }
+
+        // Caso a lista "Assistir Mais Tarde" não exista, criar uma nova
+        if (resultado.length === 0) {
+            const criarListaSQL = `INSERT INTO listas (credenciais_id, nome_lista, lista) VALUES (?, 'Assistir Mais Tarde', ?)`; 
+
+            // Criar a lista com o filme
+            const novoFilme = {
+                id: idDoFilme,
+                titulo: titulo,
+                capaURL: capaURL
+            };
+
+            const filmesArray = [JSON.stringify([novoFilme])];  // A lista começa com o filme adicionado
+
+            db.query(criarListaSQL, [credenciaisId, filmesArray], (err, resposta) => {
+                if (err) {
+                    console.log(`Erro ao criar a lista "Assistir Mais Tarde": ${err}`);
+                    return res.status(500).json({ message: 'Erro ao criar a lista "Assistir Mais Tarde"' });
+                }
+                return res.json({ message: 'Lista "Assistir Mais Tarde" criada e filme adicionado com sucesso!' });
+            });
+        } else {
+            // Se a lista já existe, apenas adicionamos o filme à lista
+            let filmesArray = JSON.parse(resultado[0].lista || '[]');
+
+            // Verificar se o filme já está na lista "Assistir Mais Tarde"
+            const filmeExiste = filmesArray.find(filme => filme.id === idDoFilme);
+            if (filmeExiste) {
+                return res.status(400).json({ message: 'Filme já está na lista "Assistir Mais Tarde"' });
+            }
+
+            // Adicionar o filme à lista
+            const novoFilme = {
+                id: idDoFilme,
+                titulo: titulo,
+                capaURL: capaURL
+            };
+            filmesArray.push(novoFilme);
+
+            // Atualizar a lista "Assistir Mais Tarde"
+            const atualizarListaSQL = `UPDATE listas SET lista = ? WHERE id = ? AND credenciais_id = ?`;
+            db.query(atualizarListaSQL, [JSON.stringify(filmesArray), resultado[0].id, credenciaisId], (err, resposta) => {
+                if (err) {
+                    console.log(`Erro ao adicionar filme à lista "Assistir Mais Tarde": ${err}`);
+                    return res.status(500).json({ message: 'Erro ao adicionar filme à lista "Assistir Mais Tarde"' });
+                }
+                return res.json({ message: 'Filme adicionado à lista "Assistir Mais Tarde" com sucesso!' });
+            });
+        }
+    });
+});
+
+app.put('/Lista/RemoverFilmeMaisTarde', VerifyToken, (req, res) => {
+    const { idDoFilme } = req.body;
+    const credenciaisId = req.user.id;
+
+    // Buscar a lista "Assistir Mais Tarde"
+    const buscarListaMaisTardeSQL = `SELECT id, lista FROM listas WHERE credenciais_id = ? AND nome_lista = 'Assistir Mais Tarde'`;
+
+    db.query(buscarListaMaisTardeSQL, [credenciaisId], (err, resultado) => {
+        if (err) {
+            console.log(`Erro ao buscar a lista "Assistir Mais Tarde": ${err}`);
+            return res.status(500).json({ message: 'Erro ao buscar a lista "Assistir Mais Tarde"' });
+        }
+
+        // Se a lista não existir
+        if (resultado.length === 0) {
+            return res.status(404).json({ message: 'Lista "Assistir Mais Tarde" não encontrada' });
+        }
+
+        let filmesArray = JSON.parse(resultado[0].lista || '[]');
+
+        // Filtrar o filme a ser removido da lista "Assistir Mais Tarde"
+        filmesArray = filmesArray.filter(filme => filme.id !== idDoFilme);
+
+        // Atualizar a lista
+        const atualizarListaSQL = `UPDATE listas SET lista = ? WHERE id = ? AND credenciais_id = ?`;
+        db.query(atualizarListaSQL, [JSON.stringify(filmesArray), resultado[0].id, credenciaisId], (err, resposta) => {
+            if (err) {
+                console.log(`Erro ao remover filme da lista "Assistir Mais Tarde": ${err}`);
+                return res.status(500).json({ message: 'Erro ao remover filme da lista "Assistir Mais Tarde"' });
+            }
+            return res.json({ message: 'Filme removido da lista "Assistir Mais Tarde" com sucesso!' });
+        });
+    });
+});
 
 app.listen(PORTA, () => {
     console.log(`Servidor iniciado na porta ${PORTA}`);
